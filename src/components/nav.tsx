@@ -19,8 +19,8 @@ export function Nav() {
   return (
     <>
       <aside className="fixed inset-y-0 left-0 hidden w-60 flex-col border-r border-line bg-card/60 p-5 backdrop-blur md:flex">
-        <div className="mb-6 px-2 text-xl font-semibold tracking-tight">
-          Auto<span className="text-gold">Monitor</span>
+        <div className="mb-6 px-2 text-lg font-semibold leading-tight tracking-tight">
+          Monitoring <span className="text-gold">Kendaraan</span>
         </div>
         <VehicleSwitcher className="mb-5" />
         <nav className="flex flex-col gap-1.5">

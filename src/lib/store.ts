@@ -1,5 +1,7 @@
 "use client";
 import { useCallback, useSyncExternalStore } from "react";
+import { describeChanges } from "./changes";
+import { notify } from "./notify";
 import type { AppState, Root, Vehicle, VehicleType } from "./types";
 
 const KEY_V1 = "monitoring-kendaraan:v1";
@@ -60,7 +62,25 @@ function read(): Root {
   return cacheVal;
 }
 
+// Perubahan beruntun (mis. mengetik nama) digabung: kirim selisih awal→akhir setelah jeda.
+const NOTIFY_DELAY_MS = 1500;
+let baseline: Root | null = null;
+let notifyTimer: ReturnType<typeof setTimeout> | undefined;
+
+function scheduleNotify(prev: Root) {
+  baseline ??= prev;
+  clearTimeout(notifyTimer);
+  notifyTimer = setTimeout(() => {
+    const lines = describeChanges(baseline!, read());
+    baseline = null;
+    if (lines.length === 0) return;
+    const text = lines.join("\n");
+    notify(text.length > 3500 ? text.slice(0, 3490) + "…" : text);
+  }, NOTIFY_DELAY_MS);
+}
+
 function write(next: Root) {
+  scheduleNotify(read());
   try {
     localStorage.setItem(KEY, JSON.stringify(next));
   } catch {}
@@ -75,6 +95,8 @@ function subscribe(cb: () => void) {
     window.removeEventListener("storage", cb);
   };
 }
+
+export const getRoot = read;
 
 function activeOf(r: Root): Vehicle {
   return r.vehicles.find((v) => v.id === r.activeId) ?? r.vehicles[0];

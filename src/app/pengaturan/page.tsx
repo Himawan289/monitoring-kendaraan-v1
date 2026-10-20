@@ -1,7 +1,8 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Bike, Car, Plus, Trash2 } from "lucide-react";
 import { Card, Field, PageHeader, btnCls, inputCls } from "@/components/ui";
+import { notify } from "@/lib/notify";
 import { useAppState, useVehicles } from "@/lib/store";
 import type { VehicleType } from "@/lib/types";
 import { clsx } from "clsx";
@@ -29,6 +30,31 @@ function TypePicker({ value, onChange }: { value: VehicleType; onChange: (t: Veh
         </button>
       ))}
     </div>
+  );
+}
+
+function TelegramCard() {
+  const [configured, setConfigured] = useState<boolean | null>(null);
+  const [msg, setMsg] = useState("");
+  useEffect(() => {
+    fetch("/api/notify").then((r) => r.json()).then((d) => setConfigured(d.configured)).catch(() => setConfigured(false));
+  }, []);
+  async function test() {
+    setMsg("Mengirim…");
+    const r = await notify("🔔 Tes notifikasi Monitoring Kendaraan berhasil.");
+    setMsg(r.ok ? "Terkirim. Cek Telegram Anda." : `Gagal: ${r.error}`);
+  }
+  return (
+    <Card className="mb-5">
+      <h2 className="mb-1 text-sm font-semibold">Notifikasi Telegram</h2>
+      <p className="mb-3 text-xs text-muted">
+        {configured === null ? "Memeriksa…" : configured ? "Bot terhubung." : "Belum terhubung. Isi TELEGRAM_BOT_TOKEN dan TELEGRAM_CHAT_ID di .env.local lalu restart server."}
+      </p>
+      <div className="flex items-center gap-3">
+        <button type="button" className={btnCls} disabled={!configured} onClick={test}>Kirim pesan tes</button>
+        {msg && <span className="text-xs text-muted">{msg}</span>}
+      </div>
+    </Card>
   );
 }
 
@@ -74,6 +100,7 @@ export default function Page() {
           <button className={btnCls + " shrink-0"}><Plus className="size-4" /> Tambah</button>
         </form>
       </Card>
+      <TelegramCard />
       <h2 className="mb-2 text-sm font-semibold text-muted">Detail kendaraan aktif</h2>
       <Card className="mb-5 grid gap-3 sm:grid-cols-2">
         <Field label="Nama kendaraan"><input className={inputCls} value={state.vehicle.name} onChange={(e) => update((s) => ({ ...s, vehicle: { ...s.vehicle, name: e.target.value } }))} /></Field>
