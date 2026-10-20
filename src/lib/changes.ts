@@ -1,4 +1,4 @@
-import { fmtKm } from "./notify";
+import { fmtKm } from "./format";
 import type { Root, Vehicle } from "./types";
 
 const SETTING_LABELS: Record<keyof Vehicle["settings"], string> = {

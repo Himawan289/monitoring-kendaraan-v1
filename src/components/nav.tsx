@@ -18,6 +18,7 @@ const ITEMS = [
 
 export function Nav() {
   const path = usePathname();
+  if (path === "/login") return null;
   return (
     <>
       <aside className="fixed inset-y-0 left-0 hidden w-60 flex-col border-r border-line bg-card/60 p-5 backdrop-blur md:flex">

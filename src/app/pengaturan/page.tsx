@@ -1,7 +1,10 @@
 "use client";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { LogOut } from "lucide-react";
+import { supabaseBrowser } from "@/lib/supabase/client";
 import { Bike, Car, Plus, Trash2 } from "lucide-react";
-import { Card, Field, PageHeader, btnCls, inputCls } from "@/components/ui";
+import { Card, Field, PageHeader, btnCls, btnGhostCls, inputCls } from "@/components/ui";
 import { notify } from "@/lib/notify";
 import { useAppState, useVehicles } from "@/lib/store";
 import type { VehicleType } from "@/lib/types";
@@ -58,6 +61,31 @@ function TelegramCard() {
   );
 }
 
+function AccountCard() {
+  const router = useRouter();
+  const [email, setEmail] = useState("");
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabaseBrowser().auth.getUser();
+      setEmail(data.user?.email ?? "");
+    })();
+  }, []);
+  async function out() {
+    await supabaseBrowser().auth.signOut();
+    router.replace("/login");
+    router.refresh();
+  }
+  return (
+    <Card className="mb-5 flex items-center justify-between gap-3">
+      <div className="min-w-0">
+        <h2 className="text-sm font-semibold">Akun</h2>
+        <p className="truncate text-xs text-muted">{email || "…"}</p>
+      </div>
+      <button type="button" className={btnGhostCls + " shrink-0"} onClick={out}><LogOut className="size-4" /> Keluar</button>
+    </Card>
+  );
+}
+
 export default function Page() {
   const { state, update } = useAppState();
   const { vehicles, activeId, setActive, add, remove } = useVehicles();
@@ -100,6 +128,7 @@ export default function Page() {
           <button className={btnCls + " shrink-0"}><Plus className="size-4" /> Tambah</button>
         </form>
       </Card>
+      <AccountCard />
       <TelegramCard />
       <h2 className="mb-2 text-sm font-semibold text-muted">Detail kendaraan aktif</h2>
       <Card className="mb-5 grid gap-3 sm:grid-cols-2">

@@ -5,6 +5,7 @@ export interface Reminder {
   level: Level;
   title: string;
   detail: string;
+  days?: number; // sisa hari (pajak), dipakai untuk menentukan kapan mengingatkan
 }
 
 const KM_WARN = 500;

@@ -1,68 +1,133 @@
 "use client";
 import { useCallback, useSyncExternalStore } from "react";
 import { describeChanges } from "./changes";
+import { DEFAULT_ROOT, DEFAULT_STATE } from "./defaults";
 import { notify } from "./notify";
 import { deletePhotos } from "./photos";
+import { addVehicleToRoot, normalize, photoIds, removeVehicleFromRoot, updateVehicleInRoot } from "./root-ops";
+import { supabaseBrowser } from "./supabase/client";
 import type { AppState, Root, Vehicle, VehicleType } from "./types";
 
-const KEY_V1 = "monitoring-kendaraan:v1";
-const KEY = "monitoring-kendaraan:v2";
+export { DEFAULT_STATE };
 
-export const DEFAULT_STATE: AppState = {
-  vehicle: { name: "Kendaraan Saya", plate: "", type: "motor" },
-  settings: {
-    oilIntervalKm: 2000,
-    oilIntervalMonths: 6,
-    serviceIntervalKm: 10000,
-    serviceIntervalMonths: 12,
-    tireIntervalDays: 14,
-  },
-  taxes: { annualDue: "", stnkDue: "" },
-  odometerLogs: [],
-  serviceLogs: [],
-  tireLogs: [],
-  fuelLogs: [],
-  parts: [],
-};
+type Status = "loading" | "ready" | "error";
+type Mutation = (r: Root) => Root;
 
-const DEFAULT_ROOT: Root = { vehicles: [{ id: "default", ...DEFAULT_STATE }], activeId: "default" };
+// serverRoot = kondisi terakhir yang diketahui di database; cache = serverRoot + perubahan lokal yang belum tersimpan.
+let serverRoot: Root = DEFAULT_ROOT;
+let version = 0;
+const pending: Mutation[] = [];
+let cache: Root = DEFAULT_ROOT;
+let status: Status = "loading";
+let userId: string | null = null;
+let flushing = false;
+let started = false;
 
 const listeners = new Set<() => void>();
-let cacheRaw: string | null = null;
-let cacheVal: Root = DEFAULT_ROOT;
+const emit = () => listeners.forEach((l) => l());
 
-/** Data lama belum punya tipe kendaraan: anggap motor. */
-function normalize(r: Root): Root {
-  return { ...r, vehicles: r.vehicles.map((v) => ({ ...DEFAULT_STATE, ...v, vehicle: { ...DEFAULT_STATE.vehicle, ...v.vehicle } })) };
+function recompute() {
+  cache = pending.reduce((r, f) => f(r), serverRoot);
+  emit();
 }
 
-function parse(raw: string | null, rawV1: string | null): Root {
+function setServer(row: { data: unknown; version: number }) {
+  serverRoot = normalize(row.data as Root);
+  version = row.version;
+}
+
+async function fetchRow() {
+  const { data } = await supabaseBrowser().from("app_state").select("data,version").eq("user_id", userId!).maybeSingle();
+  return data;
+}
+
+function readLegacyLocal(): Root | null {
   try {
-    if (raw) {
-      const r = JSON.parse(raw) as Root;
-      if (r.vehicles?.length) return normalize(r);
-    }
-    if (rawV1) {
-      // migrasi dari satu kendaraan (v1)
+    const v2 = localStorage.getItem("monitoring-kendaraan:v2");
+    if (v2) return normalize(JSON.parse(v2) as Root);
+    const v1 = localStorage.getItem("monitoring-kendaraan:v1");
+    if (v1) {
       const id = crypto.randomUUID();
-      return normalize({ vehicles: [{ id, ...DEFAULT_STATE, ...JSON.parse(rawV1) }], activeId: id });
+      return normalize({ vehicles: [{ id, ...DEFAULT_STATE, ...JSON.parse(v1) }], activeId: id });
     }
   } catch {}
-  return DEFAULT_ROOT;
+  return null;
 }
 
-function read(): Root {
-  let raw: string | null = null;
-  let rawV1: string | null = null;
+/** Muat data dari Supabase (dan impor data lama dari browser bila ini login pertama). */
+export async function initStore() {
+  if (started) return;
+  started = true;
   try {
-    raw = localStorage.getItem(KEY);
-    rawV1 = raw ? null : localStorage.getItem(KEY_V1);
-  } catch {}
-  const sig = raw ?? (rawV1 ? "v1:" + rawV1 : null);
-  if (sig === cacheRaw) return cacheVal;
-  cacheRaw = sig;
-  cacheVal = parse(raw, rawV1);
-  return cacheVal;
+    const sb = supabaseBrowser();
+    const { data } = await sb.auth.getUser();
+    if (!data.user) throw new Error("belum login");
+    userId = data.user.id;
+
+    let row = await fetchRow();
+    if (!row) {
+      const initial = readLegacyLocal() ?? DEFAULT_ROOT;
+      await sb.from("app_state").insert({ user_id: userId, data: initial, version: 0 });
+      row = await fetchRow();
+    }
+    if (!row) throw new Error("gagal memuat");
+    setServer(row);
+    status = "ready";
+    recompute();
+
+    sb.channel("app_state")
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "app_state", filter: `user_id=eq.${userId}` }, (p: { new: unknown }) => {
+        const next = p.new as { data: unknown; version: number };
+        if (next.version > version && !flushing) {
+          setServer(next);
+          recompute();
+        }
+      })
+      .subscribe();
+    document.addEventListener("visibilitychange", async () => {
+      if (document.visibilityState !== "visible" || pending.length) return;
+      const fresh = await fetchRow();
+      if (fresh && fresh.version > version) {
+        setServer(fresh);
+        recompute();
+      }
+    });
+  } catch {
+    status = "error";
+    started = false;
+    emit();
+  }
+}
+
+async function flush() {
+  if (flushing) return;
+  flushing = true;
+  try {
+    while (pending.length) {
+      const next = pending[0](serverRoot);
+      const { data, error } = await supabaseBrowser()
+        .from("app_state")
+        .update({ data: next, version: version + 1, updated_at: new Date().toISOString() })
+        .eq("user_id", userId!)
+        .eq("version", version)
+        .select("version");
+      if (error) {
+        await new Promise((r) => setTimeout(r, 3000)); // offline: coba lagi
+        continue;
+      }
+      if (data.length === 1) {
+        serverRoot = next;
+        version += 1;
+        pending.shift();
+      } else {
+        const fresh = await fetchRow(); // ada tulisan lain (mis. dari Telegram): ambil terbaru lalu ulangi
+        if (fresh) setServer(fresh);
+      }
+    }
+  } finally {
+    flushing = false;
+    recompute();
+  }
 }
 
 // Perubahan beruntun (mis. mengetik nama) digabung: kirim selisih awal→akhir setelah jeda.
@@ -74,7 +139,7 @@ function scheduleNotify(prev: Root) {
   baseline ??= prev;
   clearTimeout(notifyTimer);
   notifyTimer = setTimeout(() => {
-    const lines = describeChanges(baseline!, read());
+    const lines = describeChanges(baseline!, cache);
     baseline = null;
     if (lines.length === 0) return;
     const text = lines.join("\n");
@@ -82,74 +147,68 @@ function scheduleNotify(prev: Root) {
   }, NOTIFY_DELAY_MS);
 }
 
-function write(next: Root) {
-  scheduleNotify(read());
-  try {
-    localStorage.setItem(KEY, JSON.stringify(next));
-  } catch {}
-  listeners.forEach((l) => l());
+function commit(fn: Mutation) {
+  if (status !== "ready") return;
+  scheduleNotify(cache);
+  pending.push(fn);
+  recompute();
+  void flush();
 }
 
 function subscribe(cb: () => void) {
   listeners.add(cb);
-  window.addEventListener("storage", cb);
   return () => {
     listeners.delete(cb);
-    window.removeEventListener("storage", cb);
   };
 }
 
+const read = () => cache;
 export const getRoot = read;
 
 function activeOf(r: Root): Vehicle {
   return r.vehicles.find((v) => v.id === r.activeId) ?? r.vehicles[0];
 }
 
-/** Ubah kendaraan tertentu (mis. dari perintah Telegram), bukan hanya yang aktif. */
-export function updateVehicle(id: string, fn: (s: AppState) => AppState) {
-  const r = read();
-  write({ ...r, vehicles: r.vehicles.map((v) => (v.id === id ? { ...fn(v), id } : v)) });
+export function useStoreStatus(): Status {
+  return useSyncExternalStore(subscribe, () => status, () => "loading" as Status);
 }
 
 /** Data kendaraan aktif; `update` hanya mengubah kendaraan aktif. */
 export function useAppState() {
   const root = useSyncExternalStore(subscribe, read, () => DEFAULT_ROOT);
-  const state = activeOf(root);
   const update = useCallback((fn: (s: AppState) => AppState) => {
-    const r = read();
-    const cur = activeOf(r);
-    write({ ...r, vehicles: r.vehicles.map((v) => (v.id === cur.id ? { ...fn(cur), id: cur.id } : v)) });
+    const id = activeOf(read()).id;
+    commit((r) => updateVehicleInRoot(r, id, fn));
   }, []);
-  return { state, update };
+  return { state: activeOf(root), update };
+}
+
+export function updateVehicle(id: string, fn: (s: AppState) => AppState) {
+  commit((r) => updateVehicleInRoot(r, id, fn));
 }
 
 /** Tambah kendaraan baru dan jadikan aktif; mengembalikan id-nya. */
 export function addVehicle(name: string, type: VehicleType, plate = ""): string {
   const id = crypto.randomUUID();
-  const r = read();
-  write({
-    vehicles: [...r.vehicles, { id, ...DEFAULT_STATE, vehicle: { name: name || "Kendaraan baru", plate, type } }],
-    activeId: id,
-  });
+  commit((r) => addVehicleToRoot(r, id, name, type, plate));
   return id;
 }
 
 /** Hapus kendaraan beserta fotonya; kendaraan terakhir tidak bisa dihapus. */
 export function removeVehicle(id: string): boolean {
-  const r = read();
-  const gone = r.vehicles.find((v) => v.id === id);
-  if (!gone || r.vehicles.length <= 1) return false;
-  deletePhotos(gone.serviceLogs.flatMap((l) => [...(l.receiptPhotos ?? []), ...(l.afterPhotos ?? [])]));
-  const vehicles = r.vehicles.filter((v) => v.id !== id);
-  write({ vehicles, activeId: r.activeId === id ? vehicles[0].id : r.activeId });
+  const before = read();
+  const after = removeVehicleFromRoot(before, id);
+  if (!after) return false;
+  const keep = photoIds(after);
+  deletePhotos([...photoIds(before)].filter((p) => !keep.has(p)));
+  commit((r) => removeVehicleFromRoot(r, id) ?? r);
   return true;
 }
 
 export function useVehicles() {
   const root = useSyncExternalStore(subscribe, read, () => DEFAULT_ROOT);
-  const activeId = activeOf(root).id;
-  const setActive = useCallback((id: string) => write({ ...read(), activeId: id }), []);
-  return { vehicles: root.vehicles, activeId, setActive, add: addVehicle, remove: removeVehicle };
+  const setActive = useCallback((id: string) => commit((r) => ({ ...r, activeId: id })), []);
+  return { vehicles: root.vehicles, activeId: activeOf(root).id, setActive, add: addVehicle, remove: removeVehicle };
 }
 
 export const uid = () => crypto.randomUUID();

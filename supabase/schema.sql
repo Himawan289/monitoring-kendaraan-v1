@@ -1,42 +1,33 @@
--- Skema Postgres/Supabase untuk migrasi dari localStorage (MVP saat ini).
-create table vehicles (
-  id uuid primary key default gen_random_uuid(),
-  user_id uuid references auth.users not null,
-  name text not null,
-  plate text,
-  tax_annual_due date,
-  tax_stnk_due date,
-  oil_interval_km int default 2000,
-  oil_interval_months int default 6,
-  service_interval_km int default 10000,
-  service_interval_months int default 12,
-  tire_interval_days int default 14
+-- Skema Monitoring Kendaraan: satu baris JSON per pengguna + bucket foto privat.
+create table if not exists public.app_state (
+  user_id uuid primary key references auth.users (id) on delete cascade,
+  data jsonb not null,
+  version integer not null default 0,
+  updated_at timestamptz not null default now()
 );
-create table odometer_logs (
-  id uuid primary key default gen_random_uuid(),
-  vehicle_id uuid references vehicles on delete cascade,
-  logged_at date not null,
-  km int not null,
-  photo_path text,
-  source text check (source in ('ocr','manual'))
-);
-create table service_logs (
-  id uuid primary key default gen_random_uuid(),
-  vehicle_id uuid references vehicles on delete cascade,
-  serviced_at date not null,
-  km int not null,
-  type text check (type in ('oli','servis')),
-  cost int default 0,
-  workshop text,
-  notes text
-);
-create table tire_logs (
-  id uuid primary key default gen_random_uuid(),
-  vehicle_id uuid references vehicles on delete cascade,
-  checked_at date not null,
-  front_psi numeric,
-  rear_psi numeric,
-  notes text
-);
-alter table vehicles enable row level security;
-create policy "own vehicles" on vehicles using (user_id = auth.uid());
+
+alter table public.app_state enable row level security;
+
+drop policy if exists "app_state select" on public.app_state;
+drop policy if exists "app_state insert" on public.app_state;
+drop policy if exists "app_state update" on public.app_state;
+create policy "app_state select" on public.app_state for select using (user_id = auth.uid());
+create policy "app_state insert" on public.app_state for insert with check (user_id = auth.uid());
+create policy "app_state update" on public.app_state for update using (user_id = auth.uid()) with check (user_id = auth.uid());
+
+do $$ begin
+  alter publication supabase_realtime add table public.app_state;
+exception when duplicate_object then null;
+end $$;
+
+insert into storage.buckets (id, name, public) values ('photos', 'photos', false) on conflict (id) do nothing;
+
+drop policy if exists "photos select" on storage.objects;
+drop policy if exists "photos insert" on storage.objects;
+drop policy if exists "photos delete" on storage.objects;
+create policy "photos select" on storage.objects for select
+  using (bucket_id = 'photos' and (storage.foldername(name))[1] = auth.uid()::text);
+create policy "photos insert" on storage.objects for insert
+  with check (bucket_id = 'photos' and (storage.foldername(name))[1] = auth.uid()::text);
+create policy "photos delete" on storage.objects for delete
+  using (bucket_id = 'photos' and (storage.foldername(name))[1] = auth.uid()::text);

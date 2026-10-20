@@ -3,7 +3,6 @@ import { Geist } from "next/font/google";
 import "./globals.css";
 import { Nav } from "@/components/nav";
 import { Content } from "@/components/content";
-import { TelegramBot } from "@/components/telegram-bot";
 
 const geist = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 
@@ -19,7 +18,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="min-h-full bg-base text-fg">
         <Nav />
         <Content>{children}</Content>
-        <TelegramBot />
       </body>
     </html>
   );

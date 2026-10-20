@@ -14,4 +14,4 @@ export async function notify(text: string): Promise<{ ok: boolean; error?: strin
   }
 }
 
-export const fmtKm = (n: number) => `${n.toLocaleString("id-ID")} km`;
+export { fmtKm } from "./format";
