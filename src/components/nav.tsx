@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Camera, CircleGauge, FileText, LayoutDashboard, Settings, Wrench } from "lucide-react";
+import { Camera, CircleGauge, Cog, FileText, Fuel, LayoutDashboard, Settings, Wrench } from "lucide-react";
 import { clsx } from "clsx";
 import { VehicleSwitcher } from "./vehicle-switcher";
 
@@ -9,6 +9,8 @@ const ITEMS = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/odometer", label: "Odometer", icon: Camera },
   { href: "/servis", label: "Servis", icon: Wrench },
+  { href: "/bbm", label: "BBM", icon: Fuel },
+  { href: "/komponen", label: "Suku cadang", icon: Cog },
   { href: "/pajak", label: "Pajak", icon: FileText },
   { href: "/ban", label: "Ban", icon: CircleGauge },
   { href: "/pengaturan", label: "Atur", icon: Settings },
@@ -46,7 +48,7 @@ export function Nav() {
             href={href}
             aria-label={label}
             className={clsx(
-              "flex size-11 items-center justify-center rounded-full transition",
+              "flex size-10 items-center justify-center rounded-full transition",
               path === href ? "bg-gold text-black" : "text-muted hover:text-fg",
             )}
           >

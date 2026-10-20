@@ -1,11 +1,12 @@
 "use client";
 import Link from "next/link";
-import { CircleGauge, FileText, Gauge, Wrench } from "lucide-react";
+import { CircleGauge, FileText, Fuel, Gauge, Wrench } from "lucide-react";
 import { clsx } from "clsx";
 import { Card, LEVEL_STYLE, StatusBadge } from "@/components/ui";
 import { VehicleHero } from "@/components/vehicle-hero";
 import { Plus } from "lucide-react";
 import { allReminders, currentOdometer, serviceReminder, taxReminder, tireReminder } from "@/lib/reminders";
+import { fuelStats } from "@/lib/fuel";
 import { useAppState, useVehicles } from "@/lib/store";
 import type { Level } from "@/lib/types";
 
@@ -53,6 +54,7 @@ export default function Dashboard() {
   const stnk = taxReminder("STNK 5 tahunan", state.taxes.stnkDue);
   const tire = tireReminder(state);
   const alerts = allReminders(state).filter((r) => r.level !== "ok").sort((a, b) => rank[a.level] - rank[b.level]);
+  const fuel = fuelStats(state.fuelLogs);
   const lastTire = [...state.tireLogs].sort((a, b) => b.date.localeCompare(a.date))[0];
 
   return (
@@ -95,6 +97,13 @@ export default function Dashboard() {
           title="Tekanan ban"
           level={tire.level}
           detail={lastTire ? `${tire.detail} · terakhir F ${lastTire.front ?? "-"} / R ${lastTire.rear ?? "-"} PSI` : tire.detail}
+        />
+        <Tile
+          href="/bbm"
+          icon={Fuel}
+          title="Konsumsi BBM"
+          level="ok"
+          detail={fuel.avgKmPerL ? `${fuel.avgKmPerL.toFixed(1)} km/L · Rp ${Math.round(fuel.costPerKm ?? 0).toLocaleString("id-ID")}/km` : "Belum cukup data"}
         />
       </div>
     </>

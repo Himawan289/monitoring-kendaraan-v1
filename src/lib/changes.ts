@@ -37,14 +37,35 @@ function vehicleChanges(a: Vehicle, b: Vehicle): string[] {
 
   const odo = listDiff(a.odometerLogs, b.odometerLogs);
   odo.added.forEach((l) => out.push(`✅ Odometer dicatat: ${fmtKm(l.km)} (${l.date})`));
+  const prevOdo = byId(a.odometerLogs);
+  for (const l of b.odometerLogs) {
+    const old = prevOdo.get(l.id);
+    if (old && old.km !== l.km) out.push(`✏️ Odometer dikoreksi: ${fmtKm(old.km)} → ${fmtKm(l.km)}`);
+  }
   odo.removed.forEach((l) => out.push(`🗑️ Odometer dihapus: ${fmtKm(l.km)} (${l.date})`));
 
   const svc = listDiff(a.serviceLogs, b.serviceLogs);
   const svcLabel = (t: string) => (t === "oli" ? "Ganti oli" : "Servis berkala");
-  svc.added.forEach((l) =>
-    out.push(`✅ ${svcLabel(l.type)} dicatat: ${fmtKm(l.km)} (${l.date})${l.workshop ? `, ${l.workshop}` : ""}${l.cost ? `, ${rp(l.cost)}` : ""}`),
-  );
+  svc.added.forEach((l) => {
+    const photos = (l.receiptPhotos?.length ?? 0) + (l.afterPhotos?.length ?? 0);
+    out.push(
+      `✅ ${svcLabel(l.type)} dicatat: ${fmtKm(l.km)} (${l.date})${l.workshop ? `, ${l.workshop}` : ""}${l.cost ? `, ${rp(l.cost)}` : ""}${photos ? `, 📷 ${photos} foto` : ""}`,
+    );
+  });
   svc.removed.forEach((l) => out.push(`🗑️ ${svcLabel(l.type)} dihapus: ${fmtKm(l.km)} (${l.date})`));
+
+  const fuel = listDiff(a.fuelLogs, b.fuelLogs);
+  fuel.added.forEach((l) => out.push(`⛽ BBM dicatat: ${l.liters.toLocaleString("id-ID")} L, ${rp(l.cost)}, ${fmtKm(l.km)} (${l.date})`));
+  fuel.removed.forEach((l) => out.push(`🗑️ Log BBM dihapus: ${l.liters.toLocaleString("id-ID")} L (${l.date})`));
+
+  const parts = listDiff(a.parts, b.parts);
+  parts.added.forEach((p) => out.push(`🔧 Suku cadang ditambahkan: ${p.name}`));
+  parts.removed.forEach((p) => out.push(`🗑️ Suku cadang dihapus: ${p.name}`));
+  const prevParts = byId(a.parts);
+  for (const p of b.parts) {
+    const old = prevParts.get(p.id);
+    if (old && (old.lastKm !== p.lastKm || old.lastDate !== p.lastDate)) out.push(`🔧 ${p.name} diganti di ${fmtKm(p.lastKm)} (${p.lastDate})`);
+  }
 
   const tire = listDiff(a.tireLogs, b.tireLogs);
   tire.added.forEach((l) => out.push(`✅ Tekanan ban dicatat (${l.date}): depan ${l.front ?? "-"} / belakang ${l.rear ?? "-"} PSI`));

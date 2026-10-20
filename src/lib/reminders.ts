@@ -1,5 +1,5 @@
 import { addDays, addMonths, differenceInCalendarDays, parseISO } from "date-fns";
-import type { AppState, Level, ServiceLog } from "./types";
+import type { AppState, Level, Part, ServiceLog } from "./types";
 
 export interface Reminder {
   level: Level;
@@ -12,7 +12,7 @@ const DAYS_WARN = 30;
 export const TAX_MILESTONES = [30, 14, 7] as const;
 
 export function currentOdometer(s: AppState): number {
-  const kms = [...s.odometerLogs.map((l) => l.km), ...s.serviceLogs.map((l) => l.km)];
+  const kms = [...s.odometerLogs.map((l) => l.km), ...s.serviceLogs.map((l) => l.km), ...s.fuelLogs.map((l) => l.km)];
   return kms.length ? Math.max(...kms) : 0;
 }
 
@@ -79,6 +79,22 @@ export function tireReminder(s: AppState, now = new Date()): Reminder & { days?:
   return { level, title: "Tekanan ban", detail, days };
 }
 
+/** Suku cadang: jatuh tempo menurut km dan/atau waktu, mana yang tercapai lebih dulu. */
+export function partReminder(s: AppState, p: Part, now = new Date()): Reminder {
+  const remainingKm = p.intervalKm ? p.lastKm + p.intervalKm - currentOdometer(s) : undefined;
+  const dueDate = p.intervalMonths ? addMonths(parseISO(p.lastDate), p.intervalMonths) : undefined;
+  const remainingDays = dueDate ? differenceInCalendarDays(dueDate, now) : undefined;
+
+  const overdue = (remainingKm !== undefined && remainingKm <= 0) || (remainingDays !== undefined && remainingDays < 0);
+  const warn = (remainingKm !== undefined && remainingKm <= KM_WARN) || (remainingDays !== undefined && remainingDays <= DAYS_WARN);
+  const level: Level = overdue ? "overdue" : warn ? "warning" : "ok";
+
+  const parts: string[] = [];
+  if (remainingKm !== undefined) parts.push(remainingKm <= 0 ? `lewat ${Math.abs(remainingKm).toLocaleString("id-ID")} km` : `${remainingKm.toLocaleString("id-ID")} km lagi`);
+  if (remainingDays !== undefined) parts.push(remainingDays < 0 ? `lewat ${Math.abs(remainingDays)} hari` : `${remainingDays} hari lagi`);
+  return { level, title: p.name, detail: parts.join(" / ") || "Interval belum diatur" };
+}
+
 export function allReminders(s: AppState, now = new Date()): Reminder[] {
   return [
     taxReminder("Pajak tahunan", s.taxes.annualDue, now),
@@ -86,5 +102,6 @@ export function allReminders(s: AppState, now = new Date()): Reminder[] {
     serviceReminder(s, "oli", now),
     serviceReminder(s, "servis", now),
     tireReminder(s, now),
+    ...s.parts.map((p) => partReminder(s, p, now)),
   ];
 }

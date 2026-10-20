@@ -1,3 +1,5 @@
+import { fuelStats } from "./fuel";
+import { WRITE_HELP } from "./bot-write";
 import { allReminders, currentOdometer, serviceReminder, taxReminder, tireReminder, type Reminder } from "./reminders";
 import type { Level, Root, Vehicle } from "./types";
 
@@ -11,9 +13,12 @@ const HELP = [
   "servis — jadwal servis berkala",
   "pajak — pajak tahunan & STNK",
   "ban — tekanan ban",
+  "bbm — konsumsi & biaya BBM",
   "kendaraan — daftar kendaraan",
   "",
   "Tambahkan nama kendaraan untuk menyaring, contoh: odometer nmax",
+  "",
+  WRITE_HELP,
 ].join("\n");
 
 const line = (r: Reminder) => `${ICON[r.level]} ${r.title}: ${r.detail}`;
@@ -45,6 +50,15 @@ export function answerCommand(text: string, root: Root): string {
       return per((v) => {
         const d = lastOdometerDate(v);
         return [`📟 ${currentOdometer(v).toLocaleString("id-ID")} km${d ? ` (dicatat ${d})` : ""}`];
+      });
+    case "bbm":
+      return per((v) => {
+        const st = fuelStats(v.fuelLogs);
+        if (!v.fuelLogs.length) return ["⛽ Belum ada catatan BBM."];
+        return [
+          `⛽ ${st.avgKmPerL ? `${st.avgKmPerL.toFixed(1)} km/L` : "km/L belum bisa dihitung"}${st.costPerKm ? ` · Rp ${Math.round(st.costPerKm).toLocaleString("id-ID")}/km` : ""}`,
+          `Total: ${st.totalLiters.toLocaleString("id-ID")} L · Rp ${st.totalCost.toLocaleString("id-ID")}`,
+        ];
       });
     case "status":
       return per((v) => allReminders(v).map(line));

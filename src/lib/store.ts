@@ -2,6 +2,7 @@
 import { useCallback, useSyncExternalStore } from "react";
 import { describeChanges } from "./changes";
 import { notify } from "./notify";
+import { deletePhotos } from "./photos";
 import type { AppState, Root, Vehicle, VehicleType } from "./types";
 
 const KEY_V1 = "monitoring-kendaraan:v1";
@@ -20,6 +21,8 @@ export const DEFAULT_STATE: AppState = {
   odometerLogs: [],
   serviceLogs: [],
   tireLogs: [],
+  fuelLogs: [],
+  parts: [],
 };
 
 const DEFAULT_ROOT: Root = { vehicles: [{ id: "default", ...DEFAULT_STATE }], activeId: "default" };
@@ -30,7 +33,7 @@ let cacheVal: Root = DEFAULT_ROOT;
 
 /** Data lama belum punya tipe kendaraan: anggap motor. */
 function normalize(r: Root): Root {
-  return { ...r, vehicles: r.vehicles.map((v) => ({ ...v, vehicle: { ...DEFAULT_STATE.vehicle, ...v.vehicle } })) };
+  return { ...r, vehicles: r.vehicles.map((v) => ({ ...DEFAULT_STATE, ...v, vehicle: { ...DEFAULT_STATE.vehicle, ...v.vehicle } })) };
 }
 
 function parse(raw: string | null, rawV1: string | null): Root {
@@ -102,6 +105,12 @@ function activeOf(r: Root): Vehicle {
   return r.vehicles.find((v) => v.id === r.activeId) ?? r.vehicles[0];
 }
 
+/** Ubah kendaraan tertentu (mis. dari perintah Telegram), bukan hanya yang aktif. */
+export function updateVehicle(id: string, fn: (s: AppState) => AppState) {
+  const r = read();
+  write({ ...r, vehicles: r.vehicles.map((v) => (v.id === id ? { ...fn(v), id } : v)) });
+}
+
 /** Data kendaraan aktif; `update` hanya mengubah kendaraan aktif. */
 export function useAppState() {
   const root = useSyncExternalStore(subscribe, read, () => DEFAULT_ROOT);
@@ -114,22 +123,33 @@ export function useAppState() {
   return { state, update };
 }
 
+/** Tambah kendaraan baru dan jadikan aktif; mengembalikan id-nya. */
+export function addVehicle(name: string, type: VehicleType, plate = ""): string {
+  const id = crypto.randomUUID();
+  const r = read();
+  write({
+    vehicles: [...r.vehicles, { id, ...DEFAULT_STATE, vehicle: { name: name || "Kendaraan baru", plate, type } }],
+    activeId: id,
+  });
+  return id;
+}
+
+/** Hapus kendaraan beserta fotonya; kendaraan terakhir tidak bisa dihapus. */
+export function removeVehicle(id: string): boolean {
+  const r = read();
+  const gone = r.vehicles.find((v) => v.id === id);
+  if (!gone || r.vehicles.length <= 1) return false;
+  deletePhotos(gone.serviceLogs.flatMap((l) => [...(l.receiptPhotos ?? []), ...(l.afterPhotos ?? [])]));
+  const vehicles = r.vehicles.filter((v) => v.id !== id);
+  write({ vehicles, activeId: r.activeId === id ? vehicles[0].id : r.activeId });
+  return true;
+}
+
 export function useVehicles() {
   const root = useSyncExternalStore(subscribe, read, () => DEFAULT_ROOT);
   const activeId = activeOf(root).id;
   const setActive = useCallback((id: string) => write({ ...read(), activeId: id }), []);
-  const add = useCallback((name: string, type: VehicleType) => {
-    const id = crypto.randomUUID();
-    const r = read();
-    write({ vehicles: [...r.vehicles, { id, ...DEFAULT_STATE, vehicle: { name: name || "Kendaraan baru", plate: "", type } }], activeId: id });
-  }, []);
-  const remove = useCallback((id: string) => {
-    const r = read();
-    if (r.vehicles.length <= 1) return;
-    const vehicles = r.vehicles.filter((v) => v.id !== id);
-    write({ vehicles, activeId: r.activeId === id ? vehicles[0].id : r.activeId });
-  }, []);
-  return { vehicles: root.vehicles, activeId, setActive, add, remove };
+  return { vehicles: root.vehicles, activeId, setActive, add: addVehicle, remove: removeVehicle };
 }
 
 export const uid = () => crypto.randomUUID();

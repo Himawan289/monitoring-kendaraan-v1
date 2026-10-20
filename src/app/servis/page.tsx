@@ -3,6 +3,8 @@ import { useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import { Card, Empty, Field, PageHeader, StatusBadge, btnCls, inputCls } from "@/components/ui";
 import { currentOdometer, serviceReminder } from "@/lib/reminders";
+import { PhotoPicker, PhotoStrip } from "@/components/photos";
+import { deletePhotos, savePhoto } from "@/lib/photos";
 import { today, uid, useAppState } from "@/lib/store";
 import type { ServiceLog } from "@/lib/types";
 
@@ -10,15 +12,29 @@ export default function Page() {
   const { state, update } = useAppState();
   const [f, setF] = useState({ type: "oli" as ServiceLog["type"], date: today(), km: "", cost: "", workshop: "", notes: "" });
   const odo = currentOdometer(state);
+  const [receipts, setReceipts] = useState<File[]>([]);
+  const [afters, setAfters] = useState<File[]>([]);
+  const [saving, setSaving] = useState(false);
 
-  function add(e: React.FormEvent) {
+  async function add(e: React.FormEvent) {
     e.preventDefault();
+    setSaving(true);
     const km = Number(f.km || odo);
+    const [receiptPhotos, afterPhotos] = await Promise.all([
+      Promise.all(receipts.map(savePhoto)).catch(() => []),
+      Promise.all(afters.map(savePhoto)).catch(() => []),
+    ]);
     update((s) => ({
       ...s,
-      serviceLogs: [{ id: uid(), type: f.type, date: f.date, km, cost: Number(f.cost) || 0, workshop: f.workshop, notes: f.notes }, ...s.serviceLogs],
+      serviceLogs: [
+        { id: uid(), type: f.type, date: f.date, km, cost: Number(f.cost) || 0, workshop: f.workshop, notes: f.notes, receiptPhotos, afterPhotos },
+        ...s.serviceLogs,
+      ],
     }));
     setF({ ...f, km: "", cost: "", workshop: "", notes: "" });
+    setReceipts([]);
+    setAfters([]);
+    setSaving(false);
   }
 
   const logs = [...state.serviceLogs].sort((a, b) => b.date.localeCompare(a.date));
@@ -53,7 +69,9 @@ export default function Page() {
           <Field label="Biaya (Rp)"><input inputMode="numeric" className={inputCls} value={f.cost} onChange={(e) => setF({ ...f, cost: e.target.value.replace(/\D/g, "") })} /></Field>
           <Field label="Bengkel"><input className={inputCls} value={f.workshop} onChange={(e) => setF({ ...f, workshop: e.target.value })} /></Field>
           <Field label="Catatan"><input className={inputCls} value={f.notes} onChange={(e) => setF({ ...f, notes: e.target.value })} /></Field>
-          <button className={btnCls + " sm:col-span-2"}><Plus className="size-4" /> Simpan catatan</button>
+          <div className="sm:col-span-2"><PhotoPicker label="Foto struk" files={receipts} onChange={setReceipts} /></div>
+          <div className="sm:col-span-2"><PhotoPicker label="Foto setelah servis / ganti oli" files={afters} onChange={setAfters} /></div>
+          <button className={btnCls + " sm:col-span-2"} disabled={saving}><Plus className="size-4" /> {saving ? "Menyimpan…" : "Simpan catatan"}</button>
         </form>
       </Card>
 
@@ -66,8 +84,13 @@ export default function Page() {
                   <p className="font-medium">{l.type === "oli" ? "Ganti oli" : "Servis berkala"} · {l.km.toLocaleString("id-ID")} km</p>
                   <p className="text-muted">{l.date}{l.workshop && ` · ${l.workshop}`} · Rp {l.cost.toLocaleString("id-ID")}</p>
                   {l.notes && <p className="mt-1 text-muted">{l.notes}</p>}
+                  <PhotoStrip label="Struk" ids={l.receiptPhotos} />
+                  <PhotoStrip label="Setelah servis" ids={l.afterPhotos} />
                 </div>
-                <button aria-label="Hapus" className="text-muted/70 hover:text-red-400" onClick={() => update((s) => ({ ...s, serviceLogs: s.serviceLogs.filter((x) => x.id !== l.id) }))}>
+                <button aria-label="Hapus" className="text-muted/70 hover:text-red-400" onClick={() => {
+                  deletePhotos([...(l.receiptPhotos ?? []), ...(l.afterPhotos ?? [])]);
+                  update((s) => ({ ...s, serviceLogs: s.serviceLogs.filter((x) => x.id !== l.id) }));
+                }}>
                   <Trash2 className="size-4" />
                 </button>
               </Card>
