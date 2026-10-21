@@ -21,9 +21,9 @@ export function Nav() {
   return (
     <>
       <aside className="fixed inset-y-0 left-0 hidden w-60 flex-col border-r border-line bg-card/60 p-5 backdrop-blur md:flex">
-        <div className="mb-6 px-2 text-lg font-semibold leading-tight tracking-tight">
+        <Link href="/" aria-label="Ke dashboard" className="mb-6 rounded-xl px-2 text-lg font-semibold leading-tight tracking-tight transition hover:opacity-80">
           Monitoring <span className="text-gold-ink">Kendaraan</span>
-        </div>
+        </Link>
         <VehicleSwitcher className="mb-5" />
         <nav className="flex flex-col gap-1.5">
           {ITEMS.map(({ href, label, icon: Icon }) => (
