@@ -67,7 +67,7 @@ export default function Page() {
                     <button className={btnGhostCls + " !px-4 !py-1.5"} onClick={() => update((s) => ({ ...s, parts: s.parts.map((x) => (x.id === p.id ? { ...x, lastKm: odo, lastDate: today() } : x)) }))}>
                       <RefreshCw className="size-4" /> Tandai sudah diganti
                     </button>
-                    <button aria-label="Hapus" className="ml-auto text-muted/70 hover:text-red-400" onClick={() => update((s) => ({ ...s, parts: s.parts.filter((x) => x.id !== p.id) }))}><Trash2 className="size-4" /></button>
+                    <button aria-label="Hapus" className="ml-auto text-muted/70 hover:text-bad" onClick={() => update((s) => ({ ...s, parts: s.parts.filter((x) => x.id !== p.id) }))}><Trash2 className="size-4" /></button>
                   </div>
                 </Card>
               </li>

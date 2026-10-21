@@ -37,7 +37,7 @@ function FleetOverview() {
           <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Halo 👋</h1>
           <p className="text-sm text-muted">Pantau {vehicles.length} kendaraan Anda</p>
         </div>
-        <Link href="/pengaturan" aria-label="Tambah kendaraan" className="flex size-11 items-center justify-center rounded-full border border-line bg-card text-gold hover:bg-white/5">
+        <Link href="/pengaturan" aria-label="Tambah kendaraan" className="flex size-11 items-center justify-center rounded-full border border-line bg-card text-gold-ink hover:bg-fg/5">
           <Plus className="size-5" />
         </Link>
       </div>
@@ -63,10 +63,10 @@ export default function Dashboard() {
       <VehicleHero key={state.id} name={state.vehicle.name} plate={state.vehicle.plate} kind={state.vehicle.type} />
 
       <div className="mb-6 grid gap-4 lg:grid-cols-3">
-      <Card className="bg-gradient-to-br from-gold to-amber-600 text-black lg:col-span-1">
-        <p className="flex items-center gap-2 text-sm text-black/70"><Gauge className="size-4" /> Odometer</p>
-        <p className="mt-1 text-4xl font-semibold tabular-nums">{odo.toLocaleString("id-ID")} <span className="text-lg font-normal text-black/60">km</span></p>
-        <Link href="/odometer" className="mt-3 inline-block rounded-full bg-black px-4 py-2 text-sm font-medium text-gold hover:bg-black/80">Update odometer</Link>
+      <Card className="bg-gradient-to-br from-gold to-gold-end text-on-gold lg:col-span-1">
+        <p className="flex items-center gap-2 text-sm text-on-gold/70"><Gauge className="size-4" /> Odometer</p>
+        <p className="mt-1 text-4xl font-semibold tabular-nums">{odo.toLocaleString("id-ID")} <span className="text-lg font-normal text-on-gold/60">km</span></p>
+        <Link href="/odometer" className="mt-3 inline-block rounded-full bg-on-gold px-4 py-2 text-sm font-medium text-gold hover:opacity-85">Update odometer</Link>
       </Card>
 
       {alerts.length > 0 ? (

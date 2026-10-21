@@ -27,6 +27,13 @@ export function supabaseAdmin() {
   });
 }
 
+/** Pengguna yang sedang login; selain itu null. */
+export async function requireUser() {
+  const sb = await supabaseServer();
+  const { data } = await sb.auth.getUser();
+  return data.user ? { user: data.user, sb } : null;
+}
+
 /** Pengguna yang login dan sama dengan OWNER_EMAIL; selain itu null. */
 export async function requireOwner() {
   const sb = await supabaseServer();

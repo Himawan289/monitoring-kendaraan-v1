@@ -12,7 +12,7 @@ export function StoreGate({ children }: { children: ReactNode }) {
   if (status === "error") {
     return (
       <p className="mt-20 text-center text-sm text-muted">
-        Gagal memuat data. <a className="text-gold underline" href="/login">Masuk ulang</a> atau muat ulang halaman.
+        Gagal memuat data. <a className="text-gold-ink underline" href="/login">Masuk ulang</a> atau muat ulang halaman.
       </p>
     );
   }

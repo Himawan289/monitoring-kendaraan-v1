@@ -27,7 +27,7 @@ export default function Page() {
               <p className="mt-3 text-sm text-muted">{r.detail}</p>
               <div className="mt-3 flex gap-2">
                 {TAX_MILESTONES.map((m) => (
-                  <span key={m} className={`rounded-full px-2.5 py-0.5 text-xs ring-1 ${r.days !== undefined && r.days <= m ? (r.days < 0 ? "bg-red-500/10 text-red-400 ring-red-500/30" : "bg-amber-500/10 text-amber-400 ring-amber-500/30") : "bg-card/5 text-muted/70 ring-white/10"}`}>
+                  <span key={m} className={`rounded-full px-2.5 py-0.5 text-xs ring-1 ${r.days !== undefined && r.days <= m ? (r.days < 0 ? "bg-red-500/10 text-bad ring-red-500/30" : "bg-amber-500/10 text-warn ring-amber-500/30") : "bg-card/5 text-muted/70 ring-white/10"}`}>
                     H-{m}
                   </span>
                 ))}

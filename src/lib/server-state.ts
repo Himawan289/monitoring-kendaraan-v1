@@ -16,20 +16,19 @@ export async function getOwnerId(admin: SupabaseClient): Promise<string | null> 
   return ownerId ?? null;
 }
 
-export async function loadOwnerState(admin: SupabaseClient, userId: string): Promise<{ root: Root; version: number } | null> {
+export async function loadUserState(admin: SupabaseClient, userId: string): Promise<{ root: Root; version: number } | null> {
   const { data } = await admin.from("app_state").select("data,version").eq("user_id", userId).maybeSingle();
   return data ? { root: normalize(data.data as Root), version: data.version as number } : null;
 }
 
-/** Ubah data pemilik dengan kontrol versi; fn dijalankan ulang bila ada tulisan bersamaan. */
-export async function mutateOwnerState<T>(
+/** Ubah data satu pengguna dengan kontrol versi; fn dijalankan ulang bila ada tulisan bersamaan. */
+export async function mutateUserState<T>(
+  userId: string,
   fn: (root: Root) => { root: Root; result: T },
 ): Promise<{ before: Root; after: Root; result: T } | null> {
   const admin = supabaseAdmin();
-  const userId = await getOwnerId(admin);
-  if (!userId) return null;
   for (let attempt = 0; attempt < 4; attempt++) {
-    const cur = await loadOwnerState(admin, userId);
+    const cur = await loadUserState(admin, userId);
     if (!cur) return null;
     const { root: next, result } = fn(cur.root);
     if (next === cur.root) return { before: cur.root, after: cur.root, result };

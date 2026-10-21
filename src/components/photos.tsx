@@ -6,7 +6,7 @@ import { btnGhostCls } from "./ui";
 
 function Thumb({ id, onOpen }: { id: string; onOpen: (url: string) => void }) {
   const url = usePhotoUrl(id);
-  if (!url) return <div className="size-16 animate-pulse rounded-xl bg-white/5" />;
+  if (!url) return <div className="size-16 animate-pulse rounded-xl bg-fg/5" />;
   return (
     <button type="button" onClick={() => onOpen(url)} className="block">
       {/* eslint-disable-next-line @next/next/no-img-element */}

@@ -31,3 +31,18 @@ create policy "photos insert" on storage.objects for insert
   with check (bucket_id = 'photos' and (storage.foldername(name))[1] = auth.uid()::text);
 create policy "photos delete" on storage.objects for delete
   using (bucket_id = 'photos' and (storage.foldername(name))[1] = auth.uid()::text);
+
+-- Tautan Telegram: satu chat <-> satu pengguna. Hanya diakses server (service role), tanpa policy RLS.
+create table if not exists public.telegram_links (
+  chat_id bigint primary key,
+  user_id uuid not null unique references auth.users (id) on delete cascade,
+  created_at timestamptz not null default now()
+);
+alter table public.telegram_links enable row level security;
+
+create table if not exists public.telegram_link_codes (
+  code text primary key,
+  user_id uuid not null references auth.users (id) on delete cascade,
+  expires_at timestamptz not null
+);
+alter table public.telegram_link_codes enable row level security;

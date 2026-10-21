@@ -43,7 +43,7 @@ export default function Page() {
           <Field label="Liter"><input inputMode="decimal" required className={inputCls} value={f.liters} onChange={(e) => setF({ ...f, liters: e.target.value })} /></Field>
           <Field label="Total harga (Rp)"><input inputMode="numeric" className={inputCls} value={f.cost} onChange={(e) => setF({ ...f, cost: e.target.value.replace(/\D/g, "") })} /></Field>
           <label className="flex items-center gap-2 text-sm sm:col-span-2">
-            <input type="checkbox" className="size-4 accent-[#e6b92e]" checked={f.full} onChange={(e) => setF({ ...f, full: e.target.checked })} /> Diisi penuh (dipakai untuk hitung km/L)
+            <input type="checkbox" className="size-4 accent-gold" checked={f.full} onChange={(e) => setF({ ...f, full: e.target.checked })} /> Diisi penuh (dipakai untuk hitung km/L)
           </label>
           <button className={btnCls + " sm:col-span-2"}><Plus className="size-4" /> Simpan</button>
         </form>
@@ -59,9 +59,9 @@ export default function Page() {
                   <div className="text-sm">
                     <p className="font-medium">{l.liters.toLocaleString("id-ID")} L · {rp(l.cost)}</p>
                     <p className="text-muted">{l.date} · {l.km.toLocaleString("id-ID")} km{l.full ? "" : " · tidak penuh"}</p>
-                    {k && <p className="mt-1 text-gold">{k.toFixed(1)} km/L</p>}
+                    {k && <p className="mt-1 text-gold-ink">{k.toFixed(1)} km/L</p>}
                   </div>
-                  <button aria-label="Hapus" className="text-muted/70 hover:text-red-400" onClick={() => update((s) => ({ ...s, fuelLogs: s.fuelLogs.filter((x) => x.id !== l.id) }))}><Trash2 className="size-4" /></button>
+                  <button aria-label="Hapus" className="text-muted/70 hover:text-bad" onClick={() => update((s) => ({ ...s, fuelLogs: s.fuelLogs.filter((x) => x.id !== l.id) }))}><Trash2 className="size-4" /></button>
                 </Card>
               </li>
             );

@@ -38,7 +38,7 @@ export function OdometerForm() {
             />
           </Field>
           {suspicious && (
-            <p className="rounded-lg bg-amber-500/10 p-2.5 text-xs text-amber-400">
+            <p className="rounded-lg bg-amber-500/10 p-2.5 text-xs text-warn">
               Lebih kecil dari odometer terakhir ({last.toLocaleString("id-ID")} km). Pastikan angka benar.
             </p>
           )}
@@ -65,7 +65,7 @@ export function OdometerForm() {
                 </div>
                 <button
                   aria-label="Hapus"
-                  className="text-muted/70 hover:text-red-400"
+                  className="text-muted/70 hover:text-bad"
                   onClick={() => update((s) => ({ ...s, odometerLogs: s.odometerLogs.filter((x) => x.id !== l.id) }))}
                 >
                   <Trash2 className="size-4" />

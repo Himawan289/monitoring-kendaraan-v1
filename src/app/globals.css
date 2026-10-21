@@ -4,21 +4,90 @@
   --font-sans: var(--font-geist-sans), system-ui, sans-serif;
 }
 
-@theme {
-  --color-base: #09090a;
-  --color-card: #131315;
-  --color-line: #26262b;
-  --color-fg: #f5f5f6;
-  --color-muted: #9b9ba5;
-  --color-gold: #e6b92e;
+@theme inline {
+  --color-base: var(--c-base);
+  --color-card: var(--c-card);
+  --color-line: var(--c-line);
+  --color-fg: var(--c-fg);
+  --color-muted: var(--c-muted);
+  --color-gold: var(--c-gold);
+  --color-gold-ink: var(--c-gold-ink);
+  --color-gold-end: var(--c-gold-end);
+  --color-on-gold: var(--c-on-gold);
+  --color-ok: var(--c-ok);
+  --color-warn: var(--c-warn);
+  --color-bad: var(--c-bad);
+  --color-shade: var(--c-shade);
 }
 
+/* Tema terang adalah bawaan; gelap mengikuti OS kecuali dipaksa lewat data-theme. */
 :root {
+  color-scheme: light;
+  --c-base: #f4f4f6;
+  --c-card: #ffffff;
+  --c-line: #dcdce2;
+  --c-fg: #17171a;
+  --c-muted: #62626c;
+  --c-gold: #1c1c21;
+  --c-gold-end: #45454f;
+  --c-on-gold: #ffffff;
+  --c-gold-ink: #a87a00;
+  --c-ok: #047857;
+  --c-warn: #b45309;
+  --c-bad: #b91c1c;
+  --c-shade: #00000026;
+  --glow: 0 0 0 / 0.04;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --c-base: #09090a;
+    --c-card: #131315;
+    --c-line: #26262b;
+    --c-fg: #f5f5f6;
+    --c-muted: #9b9ba5;
+    --c-gold: #e6b92e;
+    --c-gold-ink: #e6b92e;
+    --c-gold-end: #d97706;
+    --c-on-gold: #000000;
+    --c-ok: #34d399;
+    --c-warn: #fbbf24;
+    --c-bad: #f87171;
+    --c-shade: #0000009a;
+    --glow: 230 185 46 / 0.08;
+  }
+}
+
+:root[data-theme="dark"] {
   color-scheme: dark;
+  --c-base: #09090a;
+  --c-card: #131315;
+  --c-line: #26262b;
+  --c-fg: #f5f5f6;
+  --c-muted: #9b9ba5;
+  --c-gold: #e6b92e;
+  --c-gold-ink: #e6b92e;
+  --c-gold-end: #d97706;
+  --c-on-gold: #000000;
+  --c-ok: #34d399;
+  --c-warn: #fbbf24;
+  --c-bad: #f87171;
+  --c-shade: #0000009a;
+  --glow: 230 185 46 / 0.08;
 }
 
 body {
   background:
-    radial-gradient(60rem 28rem at 50% -8rem, rgb(230 185 46 / 0.08), transparent 70%),
+    radial-gradient(60rem 28rem at 50% -8rem, rgb(var(--glow)), transparent 70%),
     var(--color-base);
 }
+
+/* Ikon tombol tema: tampilkan tujuan peralihan (matahari saat gelap, bulan saat terang). */
+.theme-sun { display: none; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .theme-sun { display: block; }
+  :root:not([data-theme="light"]) .theme-moon { display: none; }
+}
+:root[data-theme="dark"] .theme-sun { display: block; }
+:root[data-theme="dark"] .theme-moon { display: none; }

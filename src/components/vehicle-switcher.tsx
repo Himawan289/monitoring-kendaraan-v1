@@ -34,7 +34,7 @@ export function VehicleSwitcher({ className }: { className?: string }) {
           open ? "border-gold/60" : "border-line hover:border-gold/40",
         )}
       >
-        {active.vehicle.type === "mobil" ? <Car className="size-4 shrink-0 text-gold" /> : <Bike className="size-4 shrink-0 text-gold" />}
+        {active.vehicle.type === "mobil" ? <Car className="size-4 shrink-0 text-gold-ink" /> : <Bike className="size-4 shrink-0 text-gold-ink" />}
         <span className="min-w-0 flex-1">
           <span className="block truncate text-sm font-medium">{active.vehicle.name}</span>
           {active.vehicle.plate && <span className="block truncate text-[11px] text-muted">{active.vehicle.plate}</span>}
@@ -45,7 +45,7 @@ export function VehicleSwitcher({ className }: { className?: string }) {
       {open && (
         <ul
           role="listbox"
-          className="absolute inset-x-0 top-full z-30 mt-2 max-h-72 overflow-auto rounded-2xl border border-line bg-card/95 p-1.5 shadow-2xl shadow-black/60 backdrop-blur-xl"
+          className="absolute inset-x-0 top-full z-30 mt-2 max-h-72 overflow-auto rounded-2xl border border-line bg-card/95 p-1.5 shadow-2xl shadow-shade backdrop-blur-xl"
         >
           {(["motor", "mobil"] as const).map((t) => {
             const group = vehicles.filter((v) => v.vehicle.type === t);
@@ -69,7 +69,7 @@ export function VehicleSwitcher({ className }: { className?: string }) {
                           }}
                           className={clsx(
                             "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm transition",
-                            selected ? "bg-gold/10 text-gold" : "text-fg/90 hover:bg-white/5",
+                            selected ? "bg-gold/10 text-gold-ink" : "text-fg/90 hover:bg-fg/5",
                           )}
                         >
                           <span className="min-w-0 flex-1">

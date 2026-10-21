@@ -4,12 +4,12 @@ import { Hand } from "lucide-react";
 
 const Vehicle3D = dynamic(() => import("./vehicle-3d"), {
   ssr: false,
-  loading: () => <div className="size-full animate-pulse bg-white/[0.03]" />,
+  loading: () => <div className="size-full animate-pulse bg-fg/[0.03]" />,
 });
 
 export function VehicleHero({ name, plate, kind }: { name: string; plate: string; kind: "motor" | "mobil" }) {
   return (
-    <div className="relative mb-5 h-72 overflow-hidden rounded-3xl border border-line bg-gradient-to-b from-white/[0.05] to-card sm:h-96">
+    <div className="relative mb-5 h-72 overflow-hidden rounded-3xl border border-line bg-gradient-to-b from-fg/[0.05] to-card sm:h-96">
       <div className="absolute inset-0">
         <Vehicle3D kind={kind} />
       </div>

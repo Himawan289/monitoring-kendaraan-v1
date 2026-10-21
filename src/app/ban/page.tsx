@@ -45,7 +45,7 @@ export default function Page() {
                   <p className="text-muted">Depan {l.front ?? "-"} · Belakang {l.rear ?? "-"} PSI</p>
                   {l.notes && <p className="text-muted">{l.notes}</p>}
                 </div>
-                <button aria-label="Hapus" className="text-muted/70 hover:text-red-400" onClick={() => update((s) => ({ ...s, tireLogs: s.tireLogs.filter((x) => x.id !== l.id) }))}><Trash2 className="size-4" /></button>
+                <button aria-label="Hapus" className="text-muted/70 hover:text-bad" onClick={() => update((s) => ({ ...s, tireLogs: s.tireLogs.filter((x) => x.id !== l.id) }))}><Trash2 className="size-4" /></button>
               </Card>
             </li>
           ))}

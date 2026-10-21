@@ -87,7 +87,7 @@ export default function Page() {
                   <PhotoStrip label="Struk" ids={l.receiptPhotos} />
                   <PhotoStrip label="Setelah servis" ids={l.afterPhotos} />
                 </div>
-                <button aria-label="Hapus" className="text-muted/70 hover:text-red-400" onClick={() => {
+                <button aria-label="Hapus" className="text-muted/70 hover:text-bad" onClick={() => {
                   deletePhotos([...(l.receiptPhotos ?? []), ...(l.afterPhotos ?? [])]);
                   update((s) => ({ ...s, serviceLogs: s.serviceLogs.filter((x) => x.id !== l.id) }));
                 }}>

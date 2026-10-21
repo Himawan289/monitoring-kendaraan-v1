@@ -3,9 +3,9 @@ import { clsx } from "clsx";
 import type { Level } from "@/lib/types";
 
 export const LEVEL_STYLE: Record<Level, { badge: string; dot: string; label: string }> = {
-  ok: { badge: "bg-emerald-500/10 text-emerald-400 ring-emerald-500/30", dot: "bg-emerald-500/100", label: "Aman" },
-  warning: { badge: "bg-amber-500/10 text-amber-400 ring-amber-500/30", dot: "bg-amber-500/100", label: "Segera" },
-  overdue: { badge: "bg-red-500/10 text-red-400 ring-red-500/30", dot: "bg-red-500/100", label: "Terlambat" },
+  ok: { badge: "bg-emerald-500/10 text-ok ring-emerald-500/30", dot: "bg-emerald-500/100", label: "Aman" },
+  warning: { badge: "bg-amber-500/10 text-warn ring-amber-500/30", dot: "bg-amber-500/100", label: "Segera" },
+  overdue: { badge: "bg-red-500/10 text-bad ring-red-500/30", dot: "bg-red-500/100", label: "Terlambat" },
 };
 
 export function StatusBadge({ level }: { level: Level }) {
@@ -34,9 +34,9 @@ export function PageHeader({ title, subtitle }: { title: string; subtitle?: stri
 export const inputCls =
   "w-full rounded-2xl border border-line bg-base px-4 py-2.5 text-sm outline-none transition focus:border-gold focus:ring-2 focus:ring-gold/30";
 export const btnCls =
-  "inline-flex items-center justify-center gap-2 rounded-full bg-gold px-5 py-2.5 text-sm font-semibold text-black transition hover:brightness-110 disabled:opacity-50";
+  "inline-flex items-center justify-center gap-2 rounded-full bg-gold px-5 py-2.5 text-sm font-semibold text-on-gold transition hover:brightness-110 disabled:opacity-50";
 export const btnGhostCls =
-  "inline-flex items-center justify-center gap-2 rounded-xl border border-line bg-card px-4 py-2.5 text-sm font-medium text-fg/90 transition hover:bg-card/5";
+  "inline-flex items-center justify-center gap-2 rounded-xl border border-line bg-card px-4 py-2.5 text-sm font-medium text-fg/90 transition hover:bg-fg/5";
 
 export function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
