@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Car, LogOut } from "lucide-react";
 import { btnCls, btnGhostCls } from "@/components/ui";
+import { usePresence } from "@/lib/presence";
 import { supabaseBrowser } from "@/lib/supabase/client";
 
 const FAREWELL_MS = 1400;
@@ -29,6 +30,7 @@ function Farewell() {
 export function LogoutDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const router = useRouter();
   const [leaving, setLeaving] = useState(false);
+  const { mounted, state } = usePresence(open);
   const cancelRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
@@ -46,15 +48,16 @@ export function LogoutDialog({ open, onClose }: { open: boolean; onClose: () => 
     router.refresh();
   }
 
-  if (!open) return null;
   if (leaving) return <Farewell />;
+  if (!mounted) return null;
   return (
-    <div className="anim-fade-in fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm" onMouseDown={onClose}>
+    <div data-state={state} className="anim-backdrop fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm" onMouseDown={onClose}>
       <div
+        data-state={state}
         role="dialog"
         aria-modal="true"
         aria-labelledby="logout-title"
-        className="anim-pop w-full max-w-sm rounded-3xl border border-line bg-card p-6 text-center shadow-2xl shadow-shade"
+        className="anim-modal w-full max-w-sm rounded-3xl border border-line bg-card p-6 text-center shadow-2xl shadow-shade"
         onMouseDown={(e) => e.stopPropagation()}
       >
         <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-full bg-bad/10 text-bad">

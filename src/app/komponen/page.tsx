@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { Plus, RefreshCw, Trash2 } from "lucide-react";
 import { Card, Empty, Field, PageHeader, StatusBadge, btnCls, btnGhostCls, inputCls } from "@/components/ui";
+import { useConfirm } from "@/components/confirm-dialog";
 import { PART_PRESETS } from "@/lib/part-presets";
 import { currentOdometer, partReminder } from "@/lib/reminders";
 import { today, uid, useAppState } from "@/lib/store";
@@ -13,6 +14,7 @@ export default function Page() {
   const presets = PART_PRESETS[state.vehicle.type].filter((p) => !used.has(p.name));
   const blank = { name: "", km: "", months: "", lastKm: "", lastDate: today() };
   const [f, setF] = useState(blank);
+  const { ask, dialog } = useConfirm();
 
   function pick(name: string) {
     const p = PART_PRESETS[state.vehicle.type].find((x) => x.name === name);
@@ -24,11 +26,19 @@ export default function Page() {
     const intervalKm = Number(f.km) || undefined;
     const intervalMonths = Number(f.months) || undefined;
     if (!f.name.trim() || (!intervalKm && !intervalMonths)) return;
-    update((s) => ({
-      ...s,
-      parts: [...s.parts, { id: uid(), name: f.name.trim(), intervalKm, intervalMonths, lastKm: Number(f.lastKm || odo), lastDate: f.lastDate }],
-    }));
-    setF(blank);
+    const lastKm = Number(f.lastKm || odo);
+    const interval = [intervalKm && `${intervalKm.toLocaleString("id-ID")} km`, intervalMonths && `${intervalMonths} bulan`].filter(Boolean).join(" / ");
+    ask({
+      rows: [["Suku cadang", f.name.trim()], ["Interval", interval], ["Terakhir diganti", `${f.lastDate} · ${lastKm.toLocaleString("id-ID")} km`]],
+      confirmLabel: "Ya, tambahkan",
+      run: () => {
+        update((s) => ({
+          ...s,
+          parts: [...s.parts, { id: uid(), name: f.name.trim(), intervalKm, intervalMonths, lastKm, lastDate: f.lastDate }],
+        }));
+        setF(blank);
+      },
+    });
   }
 
   return (
@@ -47,6 +57,7 @@ export default function Page() {
           <div className="flex items-end"><button className={btnCls + " w-full"}><Plus className="size-4" /> Tambah</button></div>
         </form>
       </Card>
+      {dialog}
 
       {state.parts.length === 0 ? <Empty>Belum ada suku cadang yang dipantau.</Empty> : (
         <ul className="space-y-3">

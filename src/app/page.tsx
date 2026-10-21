@@ -1,5 +1,7 @@
 "use client";
 import Link from "next/link";
+import { useState } from "react";
+import { AddVehicleDialog } from "@/components/add-vehicle-dialog";
 import { CircleGauge, FileText, Fuel, Gauge, Wrench } from "lucide-react";
 import { clsx } from "clsx";
 import { Card, LEVEL_STYLE, StatusBadge } from "@/components/ui";
@@ -32,6 +34,7 @@ function Tile({ href, icon: Icon, title, level, detail }: { href: string; icon: 
 function FleetOverview() {
   const { vehicles } = useVehicles();
   const profile = useProfile();
+  const [adding, setAdding] = useState(false);
   return (
     <section className="mb-8">
       <div className="mb-5 flex items-center justify-between">
@@ -39,9 +42,10 @@ function FleetOverview() {
           <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Halo{profile.name ? `, ${profile.name}` : ""} 👋</h1>
           <p className="text-sm text-muted">Pantau {vehicles.length} kendaraan Anda</p>
         </div>
-        <Link href="/pengaturan" aria-label="Tambah kendaraan" className="flex size-11 items-center justify-center rounded-full border border-line bg-card text-gold-ink hover:bg-fg/5">
+        <button type="button" aria-label="Tambah kendaraan" onClick={() => setAdding(true)} className="flex size-11 items-center justify-center rounded-full border border-line bg-card text-gold-ink hover:bg-fg/5">
           <Plus className="size-5" />
-        </Link>
+        </button>
+        <AddVehicleDialog open={adding} onClose={() => setAdding(false)} />
       </div>
     </section>
   );

@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { LogOut, Settings } from "lucide-react";
 import { clsx } from "clsx";
+import { usePresence } from "@/lib/presence";
 import { useProfile } from "@/lib/profile";
 import { LogoutDialog } from "./logout-dialog";
 
@@ -14,6 +15,7 @@ export function ProfileMenu({ className }: { className?: string }) {
   const [open, setOpen] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const menu = usePresence(open, 140);
 
   useEffect(() => {
     if (!open) return;
@@ -39,8 +41,8 @@ export function ProfileMenu({ className }: { className?: string }) {
       >
         {(name || email)[0] ?? "?"}
       </button>
-      {open && (
-        <div className="anim-fade-in absolute right-0 top-full z-30 mt-2 w-60 rounded-2xl border border-line bg-card p-1.5 shadow-2xl shadow-shade">
+      {menu.mounted && (
+        <div data-state={menu.state} className="anim-menu absolute right-0 top-full z-30 mt-2 w-60 rounded-2xl border border-line bg-card p-1.5 shadow-2xl shadow-shade">
           <div className="border-b border-line px-3 pb-2.5 pt-2">
             <p className="truncate text-sm font-medium">{name || email || "…"}</p>
             {name && <p className="truncate text-xs text-muted">{email}</p>}

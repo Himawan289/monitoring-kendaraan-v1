@@ -1,13 +1,17 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { Bike, Car, Check, ChevronDown } from "lucide-react";
+import { Bike, Car, Check, ChevronDown, Plus } from "lucide-react";
 import { clsx } from "clsx";
+import { usePresence } from "@/lib/presence";
 import { useVehicles } from "@/lib/store";
+import { AddVehicleDialog } from "./add-vehicle-dialog";
 
 export function VehicleSwitcher({ className }: { className?: string }) {
   const { vehicles, activeId, setActive } = useVehicles();
   const [open, setOpen] = useState(false);
+  const [adding, setAdding] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const list = usePresence(open, 140);
   const active = vehicles.find((v) => v.id === activeId) ?? vehicles[0];
 
   useEffect(() => {
@@ -42,10 +46,11 @@ export function VehicleSwitcher({ className }: { className?: string }) {
         <ChevronDown className={clsx("size-4 shrink-0 text-muted transition-transform", open && "rotate-180")} />
       </button>
 
-      {open && (
+      {list.mounted && (
         <ul
           role="listbox"
-          className="absolute inset-x-0 top-full z-30 mt-2 max-h-72 overflow-auto rounded-2xl border border-line bg-card/95 p-1.5 shadow-2xl shadow-shade backdrop-blur-xl"
+          data-state={list.state}
+          className="anim-menu absolute inset-x-0 top-full z-30 mt-2 max-h-72 overflow-auto rounded-2xl border border-line bg-card/95 p-1.5 shadow-2xl shadow-shade backdrop-blur-xl"
         >
           {(["motor", "mobil"] as const).map((t) => {
             const group = vehicles.filter((v) => v.vehicle.type === t);
@@ -85,8 +90,21 @@ export function VehicleSwitcher({ className }: { className?: string }) {
               </li>
             );
           })}
+          <li role="presentation" className="mt-1 border-t border-line pt-1">
+            <button
+              type="button"
+              onClick={() => {
+                setOpen(false);
+                setAdding(true);
+              }}
+              className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium text-gold-ink transition hover:bg-fg/5"
+            >
+              <Plus className="size-4" /> Tambah kendaraan
+            </button>
+          </li>
         </ul>
       )}
+      <AddVehicleDialog open={adding} onClose={() => setAdding(false)} />
     </div>
   );
 }

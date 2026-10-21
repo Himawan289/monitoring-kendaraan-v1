@@ -3,6 +3,8 @@ import { Geist } from "next/font/google";
 import "./globals.css";
 import { Nav } from "@/components/nav";
 import { Content } from "@/components/content";
+import { Toaster } from "@/components/toaster";
+import { ValidationToast } from "@/components/validation-toast";
 import { THEME_INIT } from "@/lib/theme-init";
 
 const geist = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
@@ -22,6 +24,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="min-h-full bg-base text-fg">
         <Nav />
         <Content>{children}</Content>
+        <ValidationToast />
+        <Toaster />
       </body>
     </html>
   );
