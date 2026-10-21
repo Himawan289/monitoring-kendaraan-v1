@@ -8,12 +8,13 @@ create table if not exists public.app_state (
 
 alter table public.app_state enable row level security;
 
+-- Satu keluarga berbagi data: semua pengguna login boleh membaca/mengubah baris bersama (milik admin).
 drop policy if exists "app_state select" on public.app_state;
 drop policy if exists "app_state insert" on public.app_state;
 drop policy if exists "app_state update" on public.app_state;
-create policy "app_state select" on public.app_state for select using (user_id = auth.uid());
+create policy "app_state select" on public.app_state for select using (auth.role() = 'authenticated');
 create policy "app_state insert" on public.app_state for insert with check (user_id = auth.uid());
-create policy "app_state update" on public.app_state for update using (user_id = auth.uid()) with check (user_id = auth.uid());
+create policy "app_state update" on public.app_state for update using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');
 
 do $$ begin
   alter publication supabase_realtime add table public.app_state;
@@ -26,11 +27,11 @@ drop policy if exists "photos select" on storage.objects;
 drop policy if exists "photos insert" on storage.objects;
 drop policy if exists "photos delete" on storage.objects;
 create policy "photos select" on storage.objects for select
-  using (bucket_id = 'photos' and (storage.foldername(name))[1] = auth.uid()::text);
+  using (bucket_id = 'photos' and auth.role() = 'authenticated');
 create policy "photos insert" on storage.objects for insert
-  with check (bucket_id = 'photos' and (storage.foldername(name))[1] = auth.uid()::text);
+  with check (bucket_id = 'photos' and auth.role() = 'authenticated');
 create policy "photos delete" on storage.objects for delete
-  using (bucket_id = 'photos' and (storage.foldername(name))[1] = auth.uid()::text);
+  using (bucket_id = 'photos' and auth.role() = 'authenticated');
 
 -- Tautan Telegram: satu chat <-> satu pengguna. Hanya diakses server (service role), tanpa policy RLS.
 create table if not exists public.telegram_links (

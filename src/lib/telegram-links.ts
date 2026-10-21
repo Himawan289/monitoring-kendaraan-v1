@@ -19,6 +19,14 @@ export async function chatIdForUser(admin: SupabaseClient, userId: string): Prom
   return data ? String(data.chat_id) : null;
 }
 
+/** Semua chat keluarga: chat admin (env) ditambah chat yang sudah terhubung. */
+export async function allChatIds(admin: SupabaseClient): Promise<string[]> {
+  const { data } = await admin.from("telegram_links").select("chat_id");
+  const ids = new Set((data ?? []).map((r) => String(r.chat_id)));
+  if (process.env.TELEGRAM_CHAT_ID) ids.add(process.env.TELEGRAM_CHAT_ID);
+  return [...ids];
+}
+
 /** Buat kode sekali pakai (menggantikan kode lama pengguna). */
 export async function createLinkCode(admin: SupabaseClient, userId: string): Promise<string> {
   const bytes = crypto.getRandomValues(new Uint8Array(8));

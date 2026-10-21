@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { describeChanges } from "@/lib/changes";
 import { runBotMessage } from "@/lib/bot-handler";
 import { photoIds } from "@/lib/root-ops";
-import { mutateUserState } from "@/lib/server-state";
+import { getOwnerId, mutateUserState } from "@/lib/server-state";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { sendTelegram } from "@/lib/telegram";
 import { redeemLinkCode, userIdForChat } from "@/lib/telegram-links";
@@ -31,9 +31,11 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true });
   }
 
-  const userId = await userIdForChat(admin, chat.id);
+  // semua chat yang terhubung memakai data bersama milik pemilik
+  const allowed = await userIdForChat(admin, chat.id);
+  const userId = allowed ? await getOwnerId(admin) : null;
   if (!userId) {
-    await sendTelegram(HOW_TO_LINK, chat.id);
+    await sendTelegram(allowed ? "⚠️ Data keluarga belum tersedia." : HOW_TO_LINK, chat.id);
     return NextResponse.json({ ok: true });
   }
 

@@ -1,15 +1,12 @@
 "use client";
 import { useEffect, useState } from "react";
+import { getFamilyId } from "./family";
 import { supabaseBrowser } from "./supabase/client";
 
 const BUCKET = "photos";
 const MAX_SIDE = 1280;
 
-async function ownerPrefix(): Promise<string> {
-  const { data } = await supabaseBrowser().auth.getSession();
-  if (!data.session) throw new Error("belum login");
-  return data.session.user.id;
-}
+const ownerPrefix = getFamilyId;
 
 /** Perkecil lalu unggah ke Supabase Storage; mengembalikan id foto. */
 export async function savePhoto(file: File): Promise<string> {

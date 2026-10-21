@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { allReminders, type Reminder } from "@/lib/reminders";
-import { loadUserState } from "@/lib/server-state";
+import { getOwnerId, loadUserState } from "@/lib/server-state";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { sendTelegram } from "@/lib/telegram";
-import { chatIdForUser } from "@/lib/telegram-links";
+import { allChatIds } from "@/lib/telegram-links";
 
 const TAX_MILESTONES = [30, 14, 7, 3, 1, 0];
 const ICON = { ok: "🟢", warning: "🟡", overdue: "🔴" } as const;
@@ -21,19 +21,18 @@ export async function GET(req: Request) {
     return NextResponse.json({ ok: false }, { status: 401 });
   }
   const admin = supabaseAdmin();
-  const { data: rows } = await admin.from("app_state").select("user_id");
-  let sent = 0;
-  for (const { user_id } of rows ?? []) {
-    const chat = await chatIdForUser(admin, user_id as string);
-    const state = chat ? await loadUserState(admin, user_id as string) : null;
-    if (!chat || !state) continue;
+  const owner = await getOwnerId(admin);
+  const state = owner ? await loadUserState(admin, owner) : null;
+  if (!state) return NextResponse.json({ ok: false, error: "data keluarga belum ada" });
 
-    const blocks = state.root.vehicles
-      .map((v) => ({ v, items: allReminders(v).filter(worthSending) }))
-      .filter((b) => b.items.length)
-      .map((b) => `🚗 ${b.v.vehicle.name}\n${b.items.map((r) => `${ICON[r.level]} ${r.title}: ${r.detail}`).join("\n")}`);
-    if (!blocks.length) continue;
-    if ((await sendTelegram(`🔔 Pengingat hari ini\n\n${blocks.join("\n\n")}`, chat)).ok) sent++;
-  }
+  const blocks = state.root.vehicles
+    .map((v) => ({ v, items: allReminders(v).filter(worthSending) }))
+    .filter((b) => b.items.length)
+    .map((b) => `🚗 ${b.v.vehicle.name}\n${b.items.map((r) => `${ICON[r.level]} ${r.title}: ${r.detail}`).join("\n")}`);
+  if (!blocks.length) return NextResponse.json({ ok: true, sent: 0 });
+
+  const text = `🔔 Pengingat hari ini\n\n${blocks.join("\n\n")}`;
+  let sent = 0;
+  for (const chat of await allChatIds(admin)) if ((await sendTelegram(text, chat)).ok) sent++;
   return NextResponse.json({ ok: true, sent });
 }

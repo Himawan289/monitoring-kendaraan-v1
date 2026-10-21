@@ -2,6 +2,7 @@
 import { useCallback, useSyncExternalStore } from "react";
 import { describeChanges } from "./changes";
 import { DEFAULT_ROOT, DEFAULT_STATE } from "./defaults";
+import { getFamilyId } from "./family";
 import { notify } from "./notify";
 import { deletePhotos } from "./photos";
 import { addVehicleToRoot, normalize, photoIds, removeVehicleFromRoot, updateVehicleInRoot } from "./root-ops";
@@ -19,7 +20,7 @@ let version = 0;
 const pending: Mutation[] = [];
 let cache: Root = DEFAULT_ROOT;
 let status: Status = "loading";
-let userId: string | null = null;
+let familyId: string | null = null;
 let flushing = false;
 let started = false;
 
@@ -37,7 +38,7 @@ function setServer(row: { data: unknown; version: number }) {
 }
 
 async function fetchRow() {
-  const { data } = await supabaseBrowser().from("app_state").select("data,version").eq("user_id", userId!).maybeSingle();
+  const { data } = await supabaseBrowser().from("app_state").select("data,version").eq("user_id", familyId!).maybeSingle();
   return data;
 }
 
@@ -62,12 +63,14 @@ export async function initStore() {
     const sb = supabaseBrowser();
     const { data } = await sb.auth.getUser();
     if (!data.user) throw new Error("belum login");
-    userId = data.user.id;
+    familyId = await getFamilyId();
 
     let row = await fetchRow();
     if (!row) {
+      // data bersama dibuat sekali oleh pemilik; pengguna lain menunggu sampai ada
+      if (data.user.id !== familyId) throw new Error("data keluarga belum dibuat");
       const initial = readLegacyLocal() ?? DEFAULT_ROOT;
-      await sb.from("app_state").insert({ user_id: userId, data: initial, version: 0 });
+      await sb.from("app_state").insert({ user_id: familyId, data: initial, version: 0 });
       row = await fetchRow();
     }
     if (!row) throw new Error("gagal memuat");
@@ -76,7 +79,7 @@ export async function initStore() {
     recompute();
 
     sb.channel("app_state")
-      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "app_state", filter: `user_id=eq.${userId}` }, (p: { new: unknown }) => {
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "app_state", filter: `user_id=eq.${familyId}` }, (p: { new: unknown }) => {
         const next = p.new as { data: unknown; version: number };
         if (next.version > version && !flushing) {
           setServer(next);
@@ -108,7 +111,7 @@ async function flush() {
       const { data, error } = await supabaseBrowser()
         .from("app_state")
         .update({ data: next, version: version + 1, updated_at: new Date().toISOString() })
-        .eq("user_id", userId!)
+        .eq("user_id", familyId!)
         .eq("version", version)
         .select("version");
       if (error) {
