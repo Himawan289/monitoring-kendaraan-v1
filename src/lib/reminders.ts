@@ -5,7 +5,7 @@ export interface Reminder {
   level: Level;
   title: string;
   detail: string;
-  days?: number; // sisa hari (pajak), dipakai untuk menentukan kapan mengingatkan
+  days?: number; // sisa hari sampai jatuh tempo menurut tanggal; pengingat Telegram hanya memakai ini (km tidak selalu tercatat)
 }
 
 const KM_WARN = 500;
@@ -56,7 +56,7 @@ export function serviceReminder(
       : byKmFirst
         ? `${remainingKm.toLocaleString("id-ID")} km lagi (di ${nextKm.toLocaleString("id-ID")} km)`
         : `${remainingDays} hari lagi (${nextDate})`;
-  return { level, title: label, detail, nextKm, nextDate, remainingKm, remainingDays };
+  return { level, title: label, detail, days: remainingDays, nextKm, nextDate, remainingKm, remainingDays };
 }
 
 export function taxReminder(title: string, due: string, now = new Date()): Reminder & { days?: number } {
@@ -93,7 +93,7 @@ export function partReminder(s: AppState, p: Part, now = new Date()): Reminder {
   const parts: string[] = [];
   if (remainingKm !== undefined) parts.push(remainingKm <= 0 ? `lewat ${Math.abs(remainingKm).toLocaleString("id-ID")} km` : `${remainingKm.toLocaleString("id-ID")} km lagi`);
   if (remainingDays !== undefined) parts.push(remainingDays < 0 ? `lewat ${Math.abs(remainingDays)} hari` : `${remainingDays} hari lagi`);
-  return { level, title: p.name, detail: parts.join(" / ") || "Interval belum diatur" };
+  return { level, title: p.name, detail: parts.join(" / ") || "Interval belum diatur", days: remainingDays };
 }
 
 export function allReminders(s: AppState, now = new Date()): Reminder[] {

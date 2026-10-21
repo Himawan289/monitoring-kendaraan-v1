@@ -5,14 +5,12 @@ import { supabaseAdmin } from "@/lib/supabase/server";
 import { sendTelegram } from "@/lib/telegram";
 import { allChatIds } from "@/lib/telegram-links";
 
-const TAX_MILESTONES = [30, 14, 7, 3, 1, 0];
+const NOTIFY_DAYS = [7, 3, 1];
 const ICON = { ok: "🟢", warning: "🟡", overdue: "🔴" } as const;
 
-/** Pajak hanya diingatkan pada H-30/14/7/3/1/0 lalu tiap hari saat lewat; pengingat lain tiap hari selama belum aman. */
+/** Hanya diingatkan tepat pada H-7, H-3, dan H-1 sebelum jatuh tempo (sekali per tahap, bukan tiap hari). */
 function worthSending(r: Reminder) {
-  if (r.level === "ok") return false;
-  if (r.days === undefined) return true;
-  return r.days < 0 || TAX_MILESTONES.includes(r.days);
+  return r.days !== undefined && NOTIFY_DAYS.includes(r.days);
 }
 
 export async function GET(req: Request) {
@@ -31,7 +29,7 @@ export async function GET(req: Request) {
     .map((b) => `🚗 ${b.v.vehicle.name}\n${b.items.map((r) => `${ICON[r.level]} ${r.title}: ${r.detail}`).join("\n")}`);
   if (!blocks.length) return NextResponse.json({ ok: true, sent: 0 });
 
-  const text = `🔔 Pengingat hari ini\n\n${blocks.join("\n\n")}`;
+  const text = `🔔 Pengingat jatuh tempo\n\n${blocks.join("\n\n")}`;
   let sent = 0;
   for (const chat of await allChatIds(admin)) if ((await sendTelegram(text, chat)).ok) sent++;
   return NextResponse.json({ ok: true, sent });

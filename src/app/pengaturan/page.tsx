@@ -1,11 +1,12 @@
 "use client";
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { LogOut, Monitor, Moon, Sun, UserPlus } from "lucide-react";
-import { supabaseBrowser } from "@/lib/supabase/client";
-import { Bike, Car, Plus, Trash2 } from "lucide-react";
+import { Bike, Car, Pencil, Plus, Trash2 } from "lucide-react";
 import { Card, Field, PageHeader, btnCls, btnGhostCls, inputCls } from "@/components/ui";
 import { THEMES, setTheme, useTheme } from "@/lib/theme";
+import { LogoutDialog } from "@/components/logout-dialog";
+import { saveName, useProfile } from "@/lib/profile";
+import { serviceMonthsFor } from "@/lib/defaults";
 import { notify } from "@/lib/notify";
 import { useAppState, useVehicles } from "@/lib/store";
 import type { VehicleType } from "@/lib/types";
@@ -88,27 +89,41 @@ function TelegramCard() {
 }
 
 function AccountCard() {
-  const router = useRouter();
-  const [email, setEmail] = useState("");
-  useEffect(() => {
-    (async () => {
-      const { data } = await supabaseBrowser().auth.getUser();
-      setEmail(data.user?.email ?? "");
-    })();
-  }, []);
-  async function out() {
-    await supabaseBrowser().auth.signOut();
-    router.replace("/login");
-    router.refresh();
+  const [confirming, setConfirming] = useState(false);
+  const { name: saved, email, loaded } = useProfile();
+  return (
+    <>
+      <Card className="mb-5">
+        <h2 className="mb-3 text-sm font-semibold">Profil</h2>
+        {loaded && <NameForm key={saved} initial={saved} />}
+        <p className="mt-3 truncate text-xs text-muted">Email: {email || "…"}</p>
+      </Card>
+      <Card className="mb-5 flex items-center justify-between gap-3">
+        <div>
+          <h2 className="text-sm font-semibold">Keluar</h2>
+          <p className="text-xs text-muted">Akhiri sesi di perangkat ini.</p>
+        </div>
+        <button type="button" className={btnGhostCls + " shrink-0"} onClick={() => setConfirming(true)}><LogOut className="size-4" /> Keluar</button>
+        <LogoutDialog open={confirming} onClose={() => setConfirming(false)} />
+      </Card>
+    </>
+  );
+}
+
+function NameForm({ initial }: { initial: string }) {
+  const [name, setName] = useState(initial);
+  const [msg, setMsg] = useState("");
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    const err = await saveName(name);
+    setMsg(err ?? "Nama disimpan.");
   }
   return (
-    <Card className="mb-5 flex items-center justify-between gap-3">
-      <div className="min-w-0">
-        <h2 className="text-sm font-semibold">Akun</h2>
-        <p className="truncate text-xs text-muted">{email || "…"}</p>
-      </div>
-      <button type="button" className={btnGhostCls + " shrink-0"} onClick={out}><LogOut className="size-4" /> Keluar</button>
-    </Card>
+    <form onSubmit={submit} className="flex gap-2">
+      <input className={inputCls} placeholder="Nama tampilan, mis. Ayah" maxLength={40} value={name} onChange={(e) => setName(e.target.value)} />
+      <button className={btnCls + " shrink-0"} disabled={name.trim() === initial}>Simpan</button>
+      {msg && <span className="sr-only" role="status">{msg}</span>}
+    </form>
   );
 }
 
@@ -144,7 +159,8 @@ function ThemeCard() {
 }
 
 function UsersCard() {
-  const [users, setUsers] = useState<{ id: string; email: string }[] | null>(null);
+  const [users, setUsers] = useState<{ id: string; email: string; name: string }[] | null>(null);
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [msg, setMsg] = useState("");
@@ -158,14 +174,22 @@ function UsersCard() {
   const load = () => setTick((t) => t + 1);
   async function add(e: React.FormEvent) {
     e.preventDefault();
-    const r = await fetch("/api/admin/users", { method: "POST", body: JSON.stringify({ email, password }) });
+    const r = await fetch("/api/admin/users", { method: "POST", body: JSON.stringify({ name, email, password }) });
     const d = await r.json();
     setMsg(r.ok ? "Pengguna ditambahkan." : d.error);
     if (r.ok) {
+      setName("");
       setEmail("");
       setPassword("");
       load();
     }
+  }
+  async function rename(id: string, current: string) {
+    const next = prompt("Nama tampilan:", current);
+    if (next === null) return;
+    const r = await fetch("/api/admin/users", { method: "PATCH", body: JSON.stringify({ id, name: next }) });
+    if (!r.ok) setMsg((await r.json()).error);
+    load();
   }
   async function del(id: string) {
     const r = await fetch("/api/admin/users", { method: "DELETE", body: JSON.stringify({ id }) });
@@ -180,32 +204,39 @@ function UsersCard() {
       <ul className="mb-3 divide-y divide-line">
         {users.map((u) => (
           <li key={u.id} className="flex items-center justify-between py-2 text-sm">
-            <span className="truncate">{u.email}</span>
+            <span className="min-w-0 flex-1 truncate">
+              {u.name ? <><span className="font-medium">{u.name}</span> <span className="text-muted">· {u.email}</span></> : u.email}
+            </span>
+            <button aria-label="Ubah nama" className="mr-3 shrink-0 text-muted/70 hover:text-fg" onClick={() => rename(u.id, u.name)}>
+              <Pencil className="size-4" />
+            </button>
             <button aria-label="Hapus pengguna" className="shrink-0 text-muted/70 hover:text-bad" onClick={() => confirm(`Hapus ${u.email} beserta semua datanya?`) && del(u.id)}>
               <Trash2 className="size-4" />
             </button>
           </li>
         ))}
       </ul>
-      <form onSubmit={add} className="grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
+      <form onSubmit={add} className="grid gap-2 sm:grid-cols-2">
+        <input required maxLength={40} className={inputCls} placeholder="Nama (mis. Ayah)" value={name} onChange={(e) => setName(e.target.value)} />
         <input type="email" required className={inputCls} placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
         <input type="text" required minLength={8} className={inputCls} placeholder="Kata sandi (min. 8)" value={password} onChange={(e) => setPassword(e.target.value)} />
-        <button className={btnCls}><UserPlus className="size-4" /> Tambah</button>
+        <button className={btnCls + " sm:col-span-2"}><UserPlus className="size-4" /> Tambah pengguna</button>
       </form>
       {msg && <p className="mt-2 text-xs text-warn">{msg}</p>}
     </Card>
   );
 }
 
-export default function Page() {
+type TabId = "akun" | "tampilan" | "kendaraan" | "notifikasi" | "pengguna";
+
+function VehiclesTab() {
   const { state, update } = useAppState();
   const { vehicles, activeId, setActive, add, remove } = useVehicles();
   const [newName, setNewName] = useState("");
   return (
     <>
-      <PageHeader title="Pengaturan" />
       <Card className="mb-5">
-        <h2 className="mb-3 text-sm font-semibold">Kendaraan</h2>
+        <h2 className="mb-3 text-sm font-semibold">Daftar kendaraan</h2>
         <ul className="mb-3 divide-y divide-line">
           {vehicles.map((v) => (
             <li key={v.id} className="flex items-center justify-between py-2 text-sm">
@@ -239,18 +270,15 @@ export default function Page() {
           <button className={btnCls + " shrink-0"}><Plus className="size-4" /> Tambah</button>
         </form>
       </Card>
-      <ThemeCard />
-      <AccountCard />
-      <UsersCard />
-      <TelegramCard />
       <h2 className="mb-2 text-sm font-semibold text-muted">Detail kendaraan aktif</h2>
       <Card className="mb-5 grid gap-3 sm:grid-cols-2">
         <Field label="Nama kendaraan"><input className={inputCls} value={state.vehicle.name} onChange={(e) => update((s) => ({ ...s, vehicle: { ...s.vehicle, name: e.target.value } }))} /></Field>
         <Field label="Jenis kendaraan">
-          <TypePicker value={state.vehicle.type} onChange={(t) => update((s) => ({ ...s, vehicle: { ...s.vehicle, type: t } }))} />
+          <TypePicker value={state.vehicle.type} onChange={(t) => update((s) => ({ ...s, vehicle: { ...s.vehicle, type: t }, settings: { ...s.settings, serviceIntervalMonths: serviceMonthsFor(t) } }))} />
         </Field>
         <Field label="Plat nomor"><input className={inputCls} value={state.vehicle.plate} onChange={(e) => update((s) => ({ ...s, vehicle: { ...s.vehicle, plate: e.target.value } }))} /></Field>
       </Card>
+      <h2 className="mb-2 text-sm font-semibold text-muted">Interval pengingat</h2>
       <Card className="grid gap-3 sm:grid-cols-2">
         {NUM.map(({ key, label }) => (
           <Field key={key} label={label}>
@@ -258,6 +286,47 @@ export default function Page() {
           </Field>
         ))}
       </Card>
+    </>
+  );
+}
+
+export default function Page() {
+  const [tab, setTab] = useState<TabId>("akun");
+  const [admin, setAdmin] = useState(false);
+  useEffect(() => {
+    fetch("/api/admin/users").then((r) => setAdmin(r.ok)).catch(() => setAdmin(false));
+  }, []);
+  const tabs: { id: TabId; label: string }[] = [
+    { id: "akun", label: "Akun" },
+    { id: "tampilan", label: "Tampilan" },
+    { id: "kendaraan", label: "Kendaraan" },
+    { id: "notifikasi", label: "Notifikasi" },
+    ...(admin ? [{ id: "pengguna" as const, label: "Pengguna" }] : []),
+  ];
+  return (
+    <>
+      <PageHeader title="Pengaturan" />
+      <div role="tablist" className="-mx-4 mb-5 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0">
+        {tabs.map((t) => (
+          <button
+            key={t.id}
+            role="tab"
+            aria-selected={tab === t.id}
+            onClick={() => setTab(t.id)}
+            className={clsx(
+              "shrink-0 rounded-full border px-4 py-2 text-sm font-medium transition",
+              tab === t.id ? "border-transparent bg-gold text-on-gold" : "border-line bg-card text-muted hover:text-fg",
+            )}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+      {tab === "akun" && <AccountCard />}
+      {tab === "tampilan" && <ThemeCard />}
+      {tab === "kendaraan" && <VehiclesTab />}
+      {tab === "notifikasi" && <TelegramCard />}
+      {tab === "pengguna" && <UsersCard />}
     </>
   );
 }

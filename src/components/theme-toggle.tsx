@@ -16,7 +16,7 @@ export function ThemeToggle({ className }: { className?: string }) {
       onClick={toggle}
       aria-label="Ganti tema terang/gelap"
       title="Ganti tema"
-      className={clsx("flex size-11 shrink-0 items-center justify-center rounded-full border border-line bg-card text-gold-ink transition hover:bg-fg/5", className)}
+      className={clsx("flex shrink-0 items-center justify-center rounded-full border border-line bg-card text-gold-ink transition hover:bg-fg/5", className)}
     >
       <Sun className="theme-sun size-5" />
       <Moon className="theme-moon size-5" />

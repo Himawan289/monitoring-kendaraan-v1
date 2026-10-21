@@ -7,6 +7,7 @@ import { VehicleHero } from "@/components/vehicle-hero";
 import { Plus } from "lucide-react";
 import { allReminders, currentOdometer, serviceReminder, taxReminder, tireReminder } from "@/lib/reminders";
 import { fuelStats } from "@/lib/fuel";
+import { useProfile } from "@/lib/profile";
 import { useAppState, useVehicles } from "@/lib/store";
 import type { Level } from "@/lib/types";
 
@@ -30,11 +31,12 @@ function Tile({ href, icon: Icon, title, level, detail }: { href: string; icon: 
 
 function FleetOverview() {
   const { vehicles } = useVehicles();
+  const profile = useProfile();
   return (
     <section className="mb-8">
       <div className="mb-5 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Halo 👋</h1>
+          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Halo{profile.name ? `, ${profile.name}` : ""} 👋</h1>
           <p className="text-sm text-muted">Pantau {vehicles.length} kendaraan Anda</p>
         </div>
         <Link href="/pengaturan" aria-label="Tambah kendaraan" className="flex size-11 items-center justify-center rounded-full border border-line bg-card text-gold-ink hover:bg-fg/5">

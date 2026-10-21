@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Camera, CircleGauge, Cog, FileText, Fuel, LayoutDashboard, Settings, Wrench } from "lucide-react";
+import { Camera, CircleGauge, Cog, FileText, Fuel, LayoutDashboard, Wrench } from "lucide-react";
 import { clsx } from "clsx";
 import { VehicleSwitcher } from "./vehicle-switcher";
 
@@ -13,7 +13,6 @@ const ITEMS = [
   { href: "/komponen", label: "Suku cadang", icon: Cog },
   { href: "/pajak", label: "Pajak", icon: FileText },
   { href: "/ban", label: "Ban", icon: CircleGauge },
-  { href: "/pengaturan", label: "Atur", icon: Settings },
 ];
 
 export function Nav() {
