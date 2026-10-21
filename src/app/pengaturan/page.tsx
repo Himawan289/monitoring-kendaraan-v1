@@ -53,6 +53,7 @@ function TelegramCard() {
   async function connect() {
     const r = await fetch("/api/telegram/link", { method: "POST" });
     if (r.ok) setLink(await r.json());
+    else setMsg(`Gagal membuat kode: ${(await r.json().catch(() => null))?.error ?? r.status}`);
   }
   async function disconnect() {
     await fetch("/api/telegram/link", { method: "DELETE" });

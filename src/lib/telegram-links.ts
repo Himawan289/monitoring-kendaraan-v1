@@ -23,8 +23,10 @@ export async function chatIdForUser(admin: SupabaseClient, userId: string): Prom
 export async function createLinkCode(admin: SupabaseClient, userId: string): Promise<string> {
   const bytes = crypto.getRandomValues(new Uint8Array(8));
   const code = Array.from(bytes, (b) => ALPHABET[b % ALPHABET.length]).join("");
-  await admin.from("telegram_link_codes").delete().eq("user_id", userId);
-  await admin.from("telegram_link_codes").insert({ code, user_id: userId, expires_at: new Date(Date.now() + CODE_TTL_MS).toISOString() });
+  const cleared = await admin.from("telegram_link_codes").delete().eq("user_id", userId);
+  if (cleared.error) throw new Error(cleared.error.message);
+  const { error } = await admin.from("telegram_link_codes").insert({ code, user_id: userId, expires_at: new Date(Date.now() + CODE_TTL_MS).toISOString() });
+  if (error) throw new Error(error.message);
   return code;
 }
 

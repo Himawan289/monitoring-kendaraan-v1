@@ -7,8 +7,12 @@ import { createLinkCode } from "@/lib/telegram-links";
 export async function POST() {
   const auth = await requireUser();
   if (!auth) return NextResponse.json({ error: "Belum login" }, { status: 401 });
-  const code = await createLinkCode(supabaseAdmin(), auth.user.id);
-  return NextResponse.json({ code, bot: await getBotUsername() });
+  try {
+    const code = await createLinkCode(supabaseAdmin(), auth.user.id);
+    return NextResponse.json({ code, bot: await getBotUsername() });
+  } catch (e) {
+    return NextResponse.json({ error: e instanceof Error ? e.message : "Gagal membuat kode" }, { status: 500 });
+  }
 }
 
 /** Putuskan Telegram milik pengguna (chat admin dikelola lewat env, bukan tabel). */
